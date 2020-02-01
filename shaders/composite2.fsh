@@ -3,7 +3,6 @@
 #pragma optimize (on)
 
 varying vec2 texcoord;
-varying vec3 blockId;
 
 varying vec3 sunLight;
 varying vec3 sunraw;
