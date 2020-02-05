@@ -56,10 +56,6 @@ float waterFogColor4 = select(WaterColor, 4);
 float waterFogColor6 = select(WaterColor, 5);
 float waterFogColor5 = select(WaterColor, 6);
 
-float waterA = (WaterFogColor_G + WaterFogColor_B) / (WaterFogColor_R * WaterColorWeight_R + 0.53);
-float waterB = (WaterFogColor_R + WaterFogColor_B) / (WaterFogColor_G * WaterColorWeight_G + 0.53);
-float waterC = (WaterFogColor_R + WaterFogColor_G) / (WaterFogColor_B * WaterColorWeight_B + 0.53);
-
 Material glossy;
 Material land;
 LightSourcePBR sun;
@@ -67,6 +63,46 @@ LightSourcePBR sun;
 Mask mask;
 
 uniform vec3 fogColor;
+
+vec3 getWaterColor() {
+    #if WaterColor == 1|| WaterColor == 0
+    return vec3(2.0, 0.8, 1.0);
+    #elif WaterColor == 2
+    return vec3(2.8,0.4,1.6);
+    #elif WaterColor == 3
+    return vec3(2.4,1.5,0.1);
+    #elif WaterColor == 4
+    return vec3(0.001,4.2,3.4);
+    #elif WaterColor == 5
+    return vec3(1.0);
+    #else
+    const float waterA = (WaterFogColor_G + WaterFogColor_B) / (WaterFogColor_R * WaterColorWeight_R + 0.53);
+    const float waterB = (WaterFogColor_R + WaterFogColor_B) / (WaterFogColor_G * WaterColorWeight_G + 0.53);
+    const float waterC = (WaterFogColor_R + WaterFogColor_G) / (WaterFogColor_B * WaterColorWeight_B + 0.53);
+
+    return vec3(waterA,waterB,waterC) * 0.1;
+    #endif
+}
+
+vec3 getWaterFogColor(float light) {
+    #if WaterColor == 0
+    return vec3(0.1,0.6,0.8) * light;
+    #elif WaterColor == 1
+    return mix(vec3(0.0015,0.025,0.05) * 0.4, vec3(0.1,0.6,0.8), light);
+    #elif WaterColor == 2
+    return mix(vec3(0.0015,0.02,0.03) * 0.4, vec3(0.1,1.0,0.5), light);
+    #elif WaterColor == 3
+    return mix(vec3(0.0005,0.001,0.07) * 0.4, vec3(0.005,0.3,1.2), light);
+    #elif WaterColor == 4
+    return mix(vec3(0.05,0.0023,0.006) * 0.4, vec3(0.8,0.015,0.03) * 0.73, light);
+    #elif WaterColor == 5
+    return mix(vec3(0.0015,0.02,0.03) * 0.4, vec3(0.03, 0.15, 0.4), light);
+    #else
+    return mix(vec3(DeepWaterFogColor_R, DeepWaterFogColor_G, DeepWaterFogColor_B) * DeepWaterFogStrength * 0.4, vec3(WaterFogColor_R,WaterFogColor_G,WaterFogColor_B), light);
+    #endif
+}
+
+//void waterRender(inout vec3 color, float shader, )
 
 float sum4_depth_bias(sampler2D buf, sampler2D depth, float cutoff, vec2 uv, ivec2 offset) {
   vec4 c = textureGatherOffset(buf, uv, offset);
@@ -98,7 +134,7 @@ void main() {
 	init_mask(mask, flag);
 
 	vec3 color0 = texture2D(composite, texcoord).rgb;
-	mclight.x += texture2D(gaux1, texcoord).b;
+	//mclight.x += texture2D(gaux1, texcoord).b;
 
 	//CrespecularRays
 	#define VLCWWT
@@ -226,24 +262,24 @@ void main() {
 
 		// Render
 		if (mask.is_water || isEyeInWater == 1) {
-			float dist_diff = length(glossy.vpos) * isEyeInWater + distance(land.vpos, glossy.vpos) * (1 - isEyeInWater);
+			float dist_diff = length(glossy.vpos) * isEyeInWater0 + distance(land.vpos, glossy.vpos) * (1 - isEyeInWater);
 			dist_diff += total_internal_reflection * 4.0;
 			float dist_diff_N = min(1.0, dist_diff * 0.0625);
 
 			// Absorption
 			float absorption = 2.0 / (dist_diff_N + 1.0) - 1.0;
-			vec3 watercolor = color * (pow(vec3(clamp((absorption + (0.22 * waterFogColor6 - 0.32 * waterFogColor4 + 0.43 * (1.0 - max(float(mask.is_water), float(mask.is_sky))))), 0.1, 1.0)), (vec3(2.0, 0.8, 1.0) * (waterFogColor0 + waterFogColor1) + vec3(1.0) * waterFogColor6 + vec3(2.8,0.4,1.6) * waterFogColor2 + vec3(2.4,1.5,0.1) * waterFogColor3 + vec3(0.001,4.2,3.4) * waterFogColor4 + vec3(waterA,waterB,waterC) * 0.1 * waterFogColor5)));
+			vec3 watercolor = color * (pow(vec3(clamp((absorption + (0.22 * waterFogColor6 - 0.32 * waterFogColor4 + 0.43 * (1.0 - max(float(mask.is_water), float(mask.is_sky))))), 0.1, 1.0)), getWaterColor()));
 
 			if (isEyeInWater == 0) {
-				float light_att = (max(water_sky_light, 1.0 - shadow) - rainStrength * 0.43 * smoothstep(0.0, 0.5, BiomeType.y));
+				float light_att = (max(water_sky_light, 1.0 - shadow) - rain0 * 0.43);
 
-				vec3 waterfog = max(luma(ambient) * 0.18, 0.0) * light_att * (vec3(0.1,0.6,0.8) * waterFogColor0 + vec3(0.05,0.6,1.0) * waterFogColor1 + vec3(0.1,1.0,0.5) * waterFogColor2 + vec3(0.005,0.3,1.2) * waterFogColor3 + vec3(0.8,0.015,0.03) * waterFogColor4 * 0.73 + vec3(0.03, 0.15, 0.4) * waterFogColor6 + vec3(WaterFogColor_R,WaterFogColor_G,WaterFogColor_B) * waterFogColor5);
+				vec3 waterfog = max(luma(ambient) * 0.18, 0.0) * light_att * getWaterFogColor(1.0);
 
 				color = mix(waterfog , watercolor, clamp((pow(absorption, 2.0) * (1.0 * waterFogColor0 + 1.0 * (waterFogColor1 + waterFogColor2 + waterFogColor3 + waterFogColor5) + 1.2 * waterFogColor4) + (-0.35 * waterFogColor4 + 0.38 * waterFogColor6 + WaterColor_A * waterFogColor5 * 0.1)), 0.1, 0.92));
 			} else {
-				float light_att = (eyeBrightness.y * 0.0215 * (total_internal_reflection + 1.0) - rainStrength * 0.3 * smoothstep(0.0, 0.5, BiomeType.y));
+				float light_att = (eyeBrightness.y * 0.0215 * (total_internal_reflection + 1.0) - rain0 * 0.3);
 
-				vec3 waterfog = mix((vec3(0.0015,0.025,0.05) * waterFogColor1 + vec3(0.0015,0.02,0.03) * (waterFogColor2 + waterFogColor6) + vec3(0.0005,0.001,0.07) * waterFogColor3 + vec3(0.05,0.0023,0.006) * waterFogColor4 + vec3(DeepWaterFogColor_R, DeepWaterFogColor_G, DeepWaterFogColor_B) * waterFogColor5 * DeepWaterFogStrength) * 0.4,(vec3(0.1,0.6,0.8) * waterFogColor0 + vec3(0.05,0.6,1.0) * waterFogColor1 + vec3(0.1,1.0,0.5) * waterFogColor2 + vec3(0.005,0.3,1.2) * waterFogColor3 + vec3(0.8,0.015,0.03) * waterFogColor4 * 0.73 + vec3(0.03, 0.15, 0.4) * waterFogColor6 + vec3(WaterFogColor_R,WaterFogColor_G,WaterFogColor_B) * waterFogColor5),clamp((max(luma(ambient) * 0.18, 0.0) * light_att - 0.05), 0.0, 1.0));
+				vec3 waterfog = getWaterFogColor(clamp((max(luma(ambient) * 0.18, 0.0) * light_att - 0.05), 0.0, 1.0));
 
 				color = mix(waterfog , watercolor, clamp((pow(absorption, 2.0) + (0.52 * (waterFogColor1 + waterFogColor3) + 0.32 * waterFogColor2 - 0.45 * waterFogColor4 + WaterColor_A * waterFogColor5) + 0.62 * waterFogColor6), 0.1, 0.92));
 				}
