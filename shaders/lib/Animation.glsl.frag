@@ -65,10 +65,10 @@ mat3 cTrack() {						//Running track of corner mark
     mat3 r0 = mat3(size, 0.0, -cos(theter), 
                                  0.0, size, -sin(theter), 
                                  0.0, 0.0,   1.0            );
-    const length = 1.0 / 0.4142;
-    mat3 r1 = mat3(length, 0.0, 0.0, 
-                                 0.0, length, 0.0, 
-                                 0.0, 0.0,       1.0);
+    const float l = 1.0 / 0.4142;
+    mat3 r1 = mat3(l, 0.0, 0.0, 
+                                 0.0, l, 0.0, 
+                                 0.0, 0.0, 1.0);
     mat3 r2 = mRotate(theter - PI * 0.5);
 
     return r2 * r1 * r0;
