@@ -27,9 +27,15 @@ float animationTimeCounter = mix(max(frameTimeCounter - DELAY, 0.0), 100.0, step
 float animationTimeCounter = fract(frameTimeCounter * 0.1) * 10.0;//5.0;//
 #endif
 
+#define CORNER_MARK 0 //[0 1 2 3]
+
 #ifdef HYPERCOL_LODO_ANIMATION
 varying vec2 logoPos[8];
 varying float Ltheter;
+#endif
+
+#if CORNER_MARK > 0
+varying mat3 cLogo;
 #endif
 
 #ifdef _VERTEX_SHADER_
@@ -44,11 +50,40 @@ varying float Ltheter;
  *==============================================================================
  */
 
+mat3 mRotate(float theter) {
+	float s = sin(theter);
+	float c = cos(theter);
+	return mat3(c,     -s,   0.0, 
+			       s,    c,     0.0, 
+                               0.0, 0.0, 1.0);
+}
+
+mat3 cTrack() {						//Running track of corner mark  
+    const float size = 6.6666;
+    float theter = -frameTimeCounter * 0.6;
+
+    mat3 r0 = mat3(size, 0.0, -cos(theter), 
+                                 0.0, size, -sin(theter), 
+                                 0.0, 0.0,   1.0            );
+    const length = 1.0 / 0.4142;
+    mat3 r1 = mat3(length, 0.0, 0.0, 
+                                 0.0, length, 0.0, 
+                                 0.0, 0.0,       1.0);
+    mat3 r2 = mRotate(theter - PI * 0.5);
+
+    return r2 * r1 * r0;
+}
+
 void animationCommons() {
 	//HyperCol Logo
 	#ifdef HYPERCOL_LODO_ANIMATION
 	
 	#endif
+
+    //corner mark
+    #if CORNER_MARK > 0
+    cLogo = cTrack();
+    #endif
 }
 #else
 
@@ -104,6 +139,7 @@ mat2 mRotate(float theter) {
 	return mat2(c, -s,
 				s,  c);
 }
+
 void rotate(inout vec2 uv, in float theter) {
     uv = mRotate(theter) * uv;
 }
@@ -125,7 +161,7 @@ float triangle(in vec2 puv) {					//Build an equilateral triangle
 }
 
 float func3(in float x, float m, float mY) {
-	float a = mY / (pow3(m));
+	float a = mY / pow3(m);
 	float b = -a * m * 3.0;
 	float c = -b * m;
 	return fma(x, fma(x, a, b), c) * x;
@@ -236,23 +272,7 @@ void eyes_open(inout Tone t, vec2 fuv) {
  *==============================================================================
  */
 
-#define CORNER_MARK 0 //[0 1 2 3]
-
 #if CORNER_MARK > 0
-vec2 cTrack(out float theter) {						//Running track of corner mark  
-    float size = 6.6666;
-    theter = -frameTimeCounter * 0.6;
-    return vec2(cos(theter), sin(theter));
-}
-
-vec2 cornermark_puv_build(in vec2 fuv, in vec2 basePoint, in float theter) {
-	float size = 6.6666;
-	
-    vec2 puv = (fuv * size - basePoint) / 0.4142;
-    rotate(puv, theter - PI * 0.5);
-	return puv;
-}
-
 void cornerMark(inout Tone t, in vec2 fuv0) {
     vec2 fuv = fuv0;
 	fuv += vec2(aspectRatio - 0.3, -0.7);
@@ -261,15 +281,15 @@ void cornerMark(inout Tone t, in vec2 fuv0) {
 		//HyperCol Logo
 		const vec3 logoColor = vec3(0.0, 0.62, 0.9);
 		float logo = 0.0;
-		mat2 r45 = mRotate(PI * 0.25);
+		const mat2 r45 = mRotate(PI * 0.25);
 			
-		float Ctheter;
-		vec2 basePoint0 = cTrack(Ctheter);
+		//float Ctheter;
+		//vec2 basePoint0 = cTrack(Ctheter);
 	
 		for (int i = 0; i < 8; ++i) {
 			fuv = r45 * fuv;
-			vec2 puv = cornermark_puv_build(fuv, basePoint0, Ctheter);
-			logo += triangle(puv);
+			vec3 puv = cLogo * vec3(fuv, 1.0);//cornermark_puv_build(fuv, basePoint0, Ctheter);
+			logo += triangle(puv.st);
 		}
 		
 		logo *= smoothstep(8.0, 10.0, animationTimeCounter);
