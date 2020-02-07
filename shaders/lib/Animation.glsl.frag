@@ -59,19 +59,19 @@ mat3 mRotate(float theter) {
 }
 
 mat3 cTrack() {						//Running track of corner mark  
-    const float size = 6.6666;
-    float theter = -frameTimeCounter * 0.6;
+	const float size = 6.6666;
+	float theter = -frameTimeCounter * 0.6;
 
-    mat3 r0 = mat3(size, 0.0, -cos(theter), 
+	mat3 r0 = mat3(size, 0.0, -cos(theter), 
                                  0.0, size, -sin(theter), 
                                  0.0, 0.0,   1.0            );
-    const float l = 1.0 / 0.4142;
-    mat3 r1 = mat3(l, 0.0, 0.0, 
+	const float l = 1.0 / 0.4142;
+	mat3 r1 = mat3(l, 0.0, 0.0, 
                                  0.0, l, 0.0, 
                                  0.0, 0.0, 1.0);
-    mat3 r2 = mRotate(theter - PI * 0.5);
+	mat3 r2 = mRotate(theter - PI * 0.5);
 
-    return r2 * r1 * r0;
+	return r2 * r1 * r0;
 }
 
 void animationCommons() {
@@ -80,10 +80,10 @@ void animationCommons() {
 	
 	#endif
 
-    //corner mark
-    #if CORNER_MARK > 0
-    cLogo = cTrack();
-    #endif
+	//corner mark
+	#if CORNER_MARK > 0
+	cLogo = cTrack();
+	#endif
 }
 #else
 
@@ -110,6 +110,11 @@ vec2 fuv_build(in vec2 uv) {                //Establish coordinate system with s
  *[																				]
  *==============================================================================
  */
+
+#define ROTATE               0.0     //[-2.0 -1.5 -1.0 -0.5 0.0 0.5 1.0 1.5 2.0]
+#define ROTATING_TIME 3.0   //[0.5 1.0 1.5 2.0 2.5 3.0 3.5 4.0 4.5 5.0 5.5 6.0]
+#define SHADE_ROTATE 0.0     //[-2.0 -1.5 -1.0 -0.5 0.0 0.5 1.0 1.5 2.0]
+#define SHADE_ROTATING_TIME 3.0   //[0.5 1.0 1.5 2.0 2.5 3.0 3.5 4.0 4.5 5.0 5.5 6.0]
 
 //#define WHITE_SHADE
 #define TRANSLUCENT_SHADE  				//Only for black shade
@@ -141,7 +146,7 @@ mat2 mRotate(float theter) {
 }
 
 void rotate(inout vec2 uv, in float theter) {
-    uv = mRotate(theter) * uv;
+	uv = mRotate(theter) * uv;
 }
 
 float lozenge(in vec2 puv, float edge) {
@@ -156,7 +161,7 @@ float round(in vec2 puv, float r) {
 
 float triangle(in vec2 puv) {					//Build an equilateral triangle
 	float e1 = 0.57735 * (1.0 - puv.x) - abs(puv.y);
-    float e2 = puv.x + 1.0; 
+	float e2 = puv.x + 1.0; 
 	return min(smoothstep(0.0, 0.05, e1), smoothstep(0.0, 0.0443, e2));
 }
 
@@ -168,6 +173,18 @@ float func3(in float x, float m, float mY) {
 }
 
 void simple_animation(inout Tone t, vec2 fuv) {
+	//rotation
+	vec2 uv = texcoord;
+	vec2 rM = vec2(ROTATE * min(animationTimeCounter - ROTATING_TIME, 0.0), SHADE_ROTATE * min(animationTimeCounter - SHADE_ROTATING_TIME, 0.0));
+	vec2 l = vec2(smoothstep(- ROTATING_TIME, ROTATING_TIME, animationTimeCounter), smoothstep(-SHADE_ROTATING_TIME, SHADE_ROTATING_TIME, animationTimeCounter)) * 2.0 - 1.0;
+	rotate(uv, rM.x);
+	rotate(fuv, rM.y);
+	uv /= l.x;
+	fuv /= l.y;
+	vec3 color = texture2D(composite, uv).rgb * Cselect(uv, 0.0, 1.0);
+	float t0 = smoothstep(ROTATING_TIME, ROTATING_TIME + 1.0, animationTimeCounter);
+	t.color = mix(color, t.color, t0);
+	t.blurIndex *= t0;
 	
 	//shade
 	fuv = abs(fuv);
@@ -222,9 +239,10 @@ void simple_animation(inout Tone t, vec2 fuv) {
 	t.color *= c;
 	t.blur *= c;
 	#else
-	c = step(1.0, c);
-	t.color = mix(vec3(1.0), t.color, c);
-	t.blur = mix(vec3(1.0), t.blur, c);
+	//c = step(1.0, c);
+	t.color = mix(vec3(1.0), t.color, c0);
+	t.blur = mix(vec3(1.0), t.blur, c0);
+	t.useAdjustment *= c0;
 	#endif
 }
 
@@ -328,8 +346,8 @@ void animation(inout Tone t, vec2 uv) {
 	/*HyperCol Logo
 	#ifdef HYPERCOL_LODO_ANIMATION
 	vec3 background = vec3(1.0) * smoothstep(1.5, 3.0, animationTimeCounter);
-    HyperCol_Logo(background, fuv);
-    t.color = mix(background, t.color, smoothstep(8.0, 10.0, animationTimeCounter));
+  	HyperCol_Logo(background, fuv);
+	t.color = mix(background, t.color, smoothstep(8.0, 10.0, animationTimeCounter));
 	t.useAdjustment *= smoothstep(8.0, 10.0, animationTimeCounter);
 	#endif*/
 	
