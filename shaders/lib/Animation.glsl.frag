@@ -113,8 +113,11 @@ vec2 fuv_build(in vec2 uv) {                //Establish coordinate system with s
 
 #define ROTATE               0.0     //[-2.0 -1.5 -1.0 -0.5 0.0 0.5 1.0 1.5 2.0]
 #define ROTATING_TIME 3.0   //[0.5 1.0 1.5 2.0 2.5 3.0 3.5 4.0 4.5 5.0 5.5 6.0]
+#define ROTATING_SCALE 0.0 //[0.0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0 1.2 1.5 1.7 2.0 2.5 3.0 4.0 5.0 8.0]
+
 #define SHADE_ROTATE 0.0     //[-2.0 -1.5 -1.0 -0.5 0.0 0.5 1.0 1.5 2.0]
 #define SHADE_ROTATING_TIME 3.0   //[0.5 1.0 1.5 2.0 2.5 3.0 3.5 4.0 4.5 5.0 5.5 6.0]
+#define SHADE_ROTATING_SCALE 3.0 //[0.0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0 1.2 1.5 1.7 2.0 2.5 3.0 4.0 5.0 8.0]
 
 //#define WHITE_SHADE
 #define TRANSLUCENT_SHADE  				//Only for black shade
@@ -177,6 +180,7 @@ void simple_animation(inout Tone t, vec2 fuv) {
 	vec2 uv = texcoord;
 	vec2 rM = vec2(ROTATE * min(animationTimeCounter - ROTATING_TIME, 0.0), SHADE_ROTATE * min(animationTimeCounter - SHADE_ROTATING_TIME, 0.0));
 	vec2 l = vec2(smoothstep(- ROTATING_TIME, ROTATING_TIME, animationTimeCounter), smoothstep(-SHADE_ROTATING_TIME, SHADE_ROTATING_TIME, animationTimeCounter)) * 2.0 - 1.0;
+	l = mix(vec2 ROTATING_SCALE, SHADE_ROTATING_SCALE), vec2(1.0), l);
 	rotate(uv, rM.x);
 	rotate(fuv, rM.y);
 	uv /= l.x;
