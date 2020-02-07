@@ -177,15 +177,16 @@ float func3(in float x, float m, float mY) {
 
 void simple_animation(inout Tone t, vec2 fuv) {
 	//rotation
-	vec2 uv = texcoord;
+	vec2 uv = fuv;
+	uv.x /= aspectRatio;
 	vec2 rM = vec2(ROTATE * min(animationTimeCounter - ROTATING_TIME, 0.0), SHADE_ROTATE * min(animationTimeCounter - SHADE_ROTATING_TIME, 0.0));
 	vec2 l = vec2(smoothstep(- ROTATING_TIME, ROTATING_TIME, animationTimeCounter), smoothstep(-SHADE_ROTATING_TIME, SHADE_ROTATING_TIME, animationTimeCounter)) * 2.0 - 1.0;
-	l = mix(vec2 ROTATING_SCALE, SHADE_ROTATING_SCALE), vec2(1.0), l);
+	l = mix(vec2(ROTATING_SCALE, SHADE_ROTATING_SCALE), vec2(1.0), l);
 	rotate(uv, rM.x);
 	rotate(fuv, rM.y);
 	uv /= l.x;
 	fuv /= l.y;
-	vec3 color = texture2D(composite, uv).rgb * Cselect(uv, 0.0, 1.0);
+	vec3 color = texture2D(composite, fma(uv, 0.5, -0.5)).rgb * Cselect(uv, -1.0, 1.0);
 	float t0 = smoothstep(ROTATING_TIME, ROTATING_TIME + 1.0, animationTimeCounter);
 	t.color = mix(color, t.color, t0);
 	t.blurIndex *= t0;
