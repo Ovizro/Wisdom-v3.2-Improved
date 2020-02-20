@@ -187,7 +187,7 @@ vec2 getWetness(inout vec4 sp, float height) {
 	sp.b = max(sp.b - wet0 * 0.1 - isWater * 0.4, 0.0);
 	return vec2(isWater, (wet0 * 0.5 + isWater) * (1.0- plus(sp.g, sp.r)));
 	#else
-	return vec2(0.0, 1.0);
+	return vec2(0.0, wetness * smoothstep(0.5, 1.0, BiomeType.y));
 	#endif
 }
 
