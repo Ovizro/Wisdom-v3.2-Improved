@@ -8,21 +8,20 @@ varying vec3 sunLight;
 varying vec3 sunraw;
 varying vec3 ambientU;
 
+varying vec3 torch_color;
+
 const bool colortex1MipmapEnabled = true;
+const bool compositeMipmapEnabled = false;
 
 uniform sampler2D shadowtex0;
 uniform sampler2D shadowcolor0;
 
 #include "GlslConfig"
 
-#define WATER_CAUSTICS
-
-#define LIGHT_COLOR_TEMPERATURE 2500 //[1000 1250 1500 1750 2000 2250 2500 2750 3000 3250 3500 3750 4000 4250 4500 4750 5000 5250 5500 5750 6000 6250 6500 6750 7000 7250 7500 7750 8000 8250 8500 8750 9000]
-#define LIGHT_LEVEL 0.2 //[0.05 0.1 0.15 0.2 0.25 0.3 0.35 0.4 0.45 0.5 0.55 0.6 0.65 0.7 0.75 0.8 0.85 0.9 0.95 1.0]
-
 //#define SPACE
 #define DIRECTIONAL_LIGHTMAP
-#define FORCE_GROUND_WETNESS
+//#define FORCE_GROUND_WETNESS
+#define WATER_CAUSTICS
 
 #include "/lib/CompositeUniform.glsl.frag"
 #include "/lib/Utilities.glsl.frag"
@@ -76,8 +75,6 @@ void main() {
 
 	// build up materials & light sources
 	if (!mask.is_sky) {
-        vec3 torch_color = getLightColor(LIGHT_COLOR_TEMPERATURE * 1.0) * LIGHT_LEVEL * 0.02;
-		
 		torch.color = torch_color;
 		torch.attenuation = light_mclightmap_attenuation(mclight.x);
 
@@ -88,24 +85,15 @@ void main() {
 		
 		vec3 spos = wpos2shadowpos(land.wpos);
 		float lsa = light_shadow_autobias(land.cdepthN);
-		vec3 suncolor0 = suncolor;
 
 		float thickness = 1.0;
-		float thickness0 = 1.0;
+		sun.light.color = suncolor;
 		
-		shadow = light_fetch_shadow(shadowtex1, lsa, spos, thickness);
-		float shadow0 = light_fetch_shadow(shadowtex0, lsa, spos, thickness0);
+		shadow = light_fetch_shadow(shadowtex0, shadowcolor0, lsa, spos, thickness, sun.light.color);
 		
 		if (isEyeInWater == 1) {
-			shadow = max(shadow, 1.0 - mclight.y);
-			shadow0 = max(shadow0, 1.0 - mclight.y);
+			shadow = max(shadow, 1.0 - mclight.y * 0.5);
 		}
-		
-		#ifdef COLORFUL_SHADOW
-		colorShadow(shadowcolor0, shadow, shadow0, spos, suncolor0);
-		#endif
-		
-		sun.light.color = suncolor0;
 		sun.light.attenuation = 1.0 - max(extShadow, shadow);
 		
 		#ifdef WATER_CAUSTICS
@@ -174,7 +162,7 @@ void main() {
 		color += light_calc_PBR(sun, land, mask.is_plant ? thickness : 1.0) + light_calc_diffuse(torch, land) + light_calc_diffuse(amb, land);
 		
 		//color += mclight.y * sunLight * 0.006;
-		color += texture2D(gaux1, texcoord).rgb * 0.05 * float(mask.is_glass) * pow(dot(suncolor, vec3(0.2066)), 2.0) * (1.0 - shadow);
+		//if (isEyeInWater1 == 1 && mask.is_water) color += texture2D(gaux4, texcoord).rgb * 2.0;
 
 		// Emmisive
 		if (!mask.is_trans) color = mix(color, land.albedo * 2.0, land.emmisive);
@@ -196,5 +184,5 @@ void main() {
 	
 /* DRAWBUFFERS:3 */
 	gl_FragData[0] = vec4(max(vec3(0.0), color), 1.0f);
-	//gl_FragData[1] = bufferColor;
+	//gl_FragData[1] = texture2D(colortex0, texcoord);
 }

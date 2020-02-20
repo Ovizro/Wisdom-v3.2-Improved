@@ -53,23 +53,27 @@ varying mat3 cLogo;
 mat3 mRotate(float theter) {
 	float s = sin(theter);
 	float c = cos(theter);
-	return mat3(c,     -s,   0.0, 
-			       s,    c,     0.0, 
-                               0.0, 0.0, 1.0);
+	return mat3(c, 		-s,		0.0, 
+				s, 		c, 		0.0, 
+				0.0, 	0.0, 	1.0);
 }
 
 mat3 cTrack() {						//Running track of corner mark  
 	const float size = 6.6666;
 	float theter = -frameTimeCounter * 0.6;
 
-	mat3 r0 = mat3(size, 0.0, -cos(theter), 
-                                 0.0, size, -sin(theter), 
-                                 0.0, 0.0,   1.0            );
+	float s = sin(theter);
+	float c = cos(theter);
 	const float l = 1.0 / 0.4142;
-	mat3 r1 = mat3(l, 0.0, 0.0, 
-                                 0.0, l, 0.0, 
-                                 0.0, 0.0, 1.0);
-	mat3 r2 = mRotate(theter - PI * 0.5);
+	mat3 r0 = mat3(	size, 	0.0, 	0.0, 
+					0.0, 	size, 	0.0, 
+					-c, 	-s, 	1.0);
+	mat3 r1 = mat3(	l, 		0.0, 	0.0, 
+					0.0, 	l, 		0.0, 
+					0.0, 	0.0, 	1.0);
+	mat3 r2 = mat3(	s,		c,		0.0, 
+					-c, 	s,		0.0, 
+					0.0, 	0.0, 	1.0);
 
 	return r2 * r1 * r0;
 }
@@ -111,13 +115,13 @@ vec2 fuv_build(in vec2 uv) {                //Establish coordinate system with s
  *==============================================================================
  */
 
-#define ROTATE               0.0     //[-2.0 -1.5 -1.0 -0.5 0.0 0.5 1.0 1.5 2.0]
+#define ROTATE        0.0     //[-2.0 -1.5 -1.0 -0.5 0.0 0.5 1.0 1.5 2.0]
 #define ROTATING_TIME 3.0   //[0.5 1.0 1.5 2.0 2.5 3.0 3.5 4.0 4.5 5.0 5.5 6.0]
-#define ROTATING_SCALE 0.0 //[0.0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0 1.2 1.5 1.7 2.0 2.5 3.0 4.0 5.0 8.0]
+#define ROTATING_SCALE 1.0 //[0.0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0 1.2 1.5 1.7 2.0 2.5 3.0 4.0 5.0 8.0]
 
 #define SHADE_ROTATE 0.0     //[-2.0 -1.5 -1.0 -0.5 0.0 0.5 1.0 1.5 2.0]
 #define SHADE_ROTATING_TIME 3.0   //[0.5 1.0 1.5 2.0 2.5 3.0 3.5 4.0 4.5 5.0 5.5 6.0]
-#define SHADE_ROTATING_SCALE 3.0 //[0.0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0 1.2 1.5 1.7 2.0 2.5 3.0 4.0 5.0 8.0]
+#define SHADE_ROTATING_SCALE 1.0 //[0.0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0 1.2 1.5 1.7 2.0 2.5 3.0 4.0 5.0 8.0]
 
 //#define WHITE_SHADE
 #define TRANSLUCENT_SHADE  				//Only for black shade
@@ -178,18 +182,21 @@ float func3(in float x, float m, float mY) {
 void simple_animation(inout Tone t, vec2 fuv) {
 	//rotation
 	vec2 uv = fuv;
-	uv.x /= aspectRatio;
 	vec2 rM = vec2(ROTATE * min(animationTimeCounter - ROTATING_TIME, 0.0), SHADE_ROTATE * min(animationTimeCounter - SHADE_ROTATING_TIME, 0.0));
 	vec2 l = vec2(smoothstep(- ROTATING_TIME, ROTATING_TIME, animationTimeCounter), smoothstep(-SHADE_ROTATING_TIME, SHADE_ROTATING_TIME, animationTimeCounter)) * 2.0 - 1.0;
 	l = mix(vec2(ROTATING_SCALE, SHADE_ROTATING_SCALE), vec2(1.0), l);
-	rotate(uv, rM.x);
-	rotate(fuv, rM.y);
-	uv /= l.x;
-	fuv /= l.y;
-	vec3 color = texture2D(composite, fma(uv, 0.5, -0.5)).rgb * Cselect(uv, -1.0, 1.0);
-	float t0 = smoothstep(ROTATING_TIME, ROTATING_TIME + 1.0, animationTimeCounter);
-	t.color = mix(color, t.color, t0);
-	t.blurIndex *= t0;
+	if (SHADE_ROTATE != 0 || SHADE_ROTATING_SCALE != 1) {
+		rotate(fuv, rM.y);
+		fuv /= l.y;
+	}
+	if (ROTATE != 0 || ROTATING_SCALE != 1) {
+		rotate(uv, rM.x);
+		uv /= vec2(aspectRatio, 1.0) * l.x;
+		vec3 color = texture2D(composite, uv * 0.5 + 0.5).rgb * Cselect(uv, -1.0, 1.0);
+		float t0 = smoothstep(ROTATING_TIME, ROTATING_TIME + 1.0, animationTimeCounter);
+		t.color = mix(color, t.color, t0);
+		t.blurIndex *= t0;
+	}
 	
 	//shade
 	fuv = abs(fuv);
@@ -296,6 +303,7 @@ void eyes_open(inout Tone t, vec2 fuv) {
  */
 
 #if CORNER_MARK > 0
+
 void cornerMark(inout Tone t, in vec2 fuv0) {
     vec2 fuv = fuv0;
 	fuv += vec2(aspectRatio - 0.3, -0.7);
@@ -304,14 +312,14 @@ void cornerMark(inout Tone t, in vec2 fuv0) {
 		//HyperCol Logo
 		const vec3 logoColor = vec3(0.0, 0.62, 0.9);
 		float logo = 0.0;
-		const mat2 r45 = mRotate(PI * 0.25);
+		mat2 r45 = mRotate(PI * 0.25);
 			
 		//float Ctheter;
 		//vec2 basePoint0 = cTrack(Ctheter);
 	
 		for (int i = 0; i < 8; ++i) {
 			fuv = r45 * fuv;
-			vec3 puv = cLogo * vec3(fuv, 1.0);//cornermark_puv_build(fuv, basePoint0, Ctheter);
+			vec3 puv = cLogo * vec3(fuv, 1.0);//cornermark_puv_build(fuv, basePoint0, Ctheter);//
 			logo += triangle(puv.st);
 		}
 		

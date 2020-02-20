@@ -301,6 +301,7 @@ value.MOTIONBLUR_SAMPLE.99=§4显卡杀手（99）§r
 #========Animation Option===========
 screen.ANIMATION_OPTION=动画选项
 screen.ANIMATION_SHADE=遮罩动画
+screen.ANIMATION_ROTATION=旋转动画
 
 option.ANIMATION=开场动画
 option.CORNER_MARK=角标动画
@@ -329,6 +330,13 @@ option.ROUND_SHADE_MIDDLE_TIME=圆形遮罩-停顿时刻
 option.ROUND_SHADE_MIDDLE_POSITION=圆形不透明层-停顿位置
 option.TRANSLUCENT_ROUND_SHADE_MIDDLE_POSITION=圆形半透明层-停顿位置
 
+option.ROTATE=旋转速度
+option.ROTATING_TIME=旋转时间
+option.ROTATING_SCALE=缩放程度
+option.SHADE_ROTATE=遮罩旋转速度
+option.SHADE_ROTATING_TIME=遮罩旋转时间
+option.SHADE_ROTATING_SCALE=遮罩缩放程度
+
 value.ANIMATION.0=关闭
 value.ANIMATION.2=苏醒
 value.ANIMATION.3=简单动画
@@ -337,6 +345,16 @@ value.CORNER_MARK.0=关
 value.CORNER_MARK.1=HyperCol Logo样式1
 value.CORNER_MARK.2=HyperCol Logo样式2
 value.CORNER_MARK.3=HyperCol Logo样式3
+#=======Rain Splashes Option========
+screen.RAIN_SPLASHES=雨天积水设置
+
+option.FORCE_GROUND_WETNESS=旧雨天积水效果
+option.FORCE_GROUND_WETNESS.comment=适用于无资源包
+
+option.NEW_RAIN_SPLASHES=新雨天积水
+option.RAIN_SPLASH_LEVEL=积水强度
+option.RAIN_SPLASH_WAVE=积水波动
+option.RAIN_SPLASH_GUALITY=积水涟漪
 
 #===================================
 

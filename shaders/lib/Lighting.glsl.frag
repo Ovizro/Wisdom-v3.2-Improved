@@ -96,57 +96,81 @@ float shadowTexSmooth(in sampler2D s, in vec3 spos, in float bias, out float dep
 }
 
 #define VARIANCE_SHADOW_MAPS
+#define COLORFUL_SHADOW
 
-float light_fetch_shadow(sampler2D smap, in float bias, in vec3 spos, out float thickness) {
-	float shade = 0.0; thickness = 0.0;
+float light_fetch_shadow(sampler2D smap, sampler2D shcolor, in float bias, in vec3 spos, out float thickness, inout vec3 color) {
+	float shade = 0.0, shade0 = 0.0; thickness = 0.0;
 
 	if (spos != clamp(spos, vec3(0.0), vec3(1.0))) return shade;
 
 	#ifdef SHADOW_FILTER
 		#ifdef VARIANCE_SHADOW_MAPS
-		float M1 = 0.0, M2 = 0.0;
+		vec2 M1 = vec2(0.0), M2 = vec2(0.0);
 
 		float a = 0.0;
-		float xs = 0.0;
+		float b = 0.0;
+		vec2 xs = vec2(0.0);
 		float n = bayer_4x4(texcoord.st, vec2(viewWidth, viewHeight));
 		for (int i = -1; i < 2; i++) {
 			for (int j = -1; j < 2; j++) {
 				vec2 offset = vec2(i, j) * (fract(n + i * j * 0.17) * (1.0 + cloud_coverage * 2.0) * 0.7 + 0.3);
-				a = texture2D(smap, spos.st + offset * 0.001f).x + bias * (1.0 + n);
-				M2 += a * a;
-				M1 += a;
+				a = texture2D(shadowtex1, spos.st + offset * 0.001f).x + bias * (1.0 + n);
+				b = texture2D(smap, spos.st + offset * 0.001f).x + bias * (1.0 + n);
+				M2 += vec2(a * a, b * b);
+				M1 += vec2(a, b);
 
-				xs += float(a < spos.z);
+				xs += vec2(float(a < spos.z), float(b < spos.z));
 			}
 		}
 		const float d25f = 1.0 / 9.0;
 		M1 *= d25f; M2 *= d25f; xs *= d25f;
 
-		if (M1 < spos.z) {
-			float t_M1 = spos.z - M1;
+		if (M1.x < spos.z) {
+			float t_M1 = spos.z - M1.x;
 
-			float v = M2 - M1 * M1;
-			shade = max(xs, 1.0 - v / (v + t_M1 * t_M1));
+			float v = M2.x - M1.x * M1.x;
+			shade = max(xs.x, 1.0 - v / (v + t_M1 * t_M1));
+		}
+		if (M1.y < spos.z) {
+			float t_M1 = spos.z - M1.y;
+
+			float v = M2.y - M1.y * M1.y;
+			shade0 = max(xs.y, 1.0 - v / (v + t_M1 * t_M1));
 		}
 
-		thickness = distance(spos.z, M1) * 64.0 * shade;
+		thickness = distance(spos.z, M1.x) * 64.0 * shade;
+		#ifdef COLORFUL_SHADOW
+		vec3 shadowcolor = texture2D(shcolor, spos.xy).rgb * luma(suncolor) * 0.4;
+		color = mix(color, shadowcolor, shade0 * 0.9);
+		#endif
 		#else
-		float avd = 0.0;
+		vec2 avd = vec2(0.0);
 		float n = bayer_4x4(texcoord.st, vec2(viewWidth, viewHeight));
 		for (int i = -1; i < 2; i++) {
 			for (int j = -1; j < 2; j++) {
 				vec2 offset = vec2(i, j) * (fract(n + i * j * 0.17) * (1.0 + cloud_coverage * 2.0) * 0.7 + 0.3);
-				float shadowDepth = texture2D(smap, spos.st + offset * 0.001f).x + bias * (1.0 + n);
+				vec2 shadowDepth = vec2(texture2D(shadowtex1, spos.st + offset * 0.001f).x + bias * (1.0 + n), texture2D(smap, spos.st + offset * 0.001f).x + bias * (1.0 + n));
 				avd += shadowDepth;
-				shade += float(shadowDepth + bias < spos.z);
+				shade += float(shadowDepth.x + bias < spos.z);
+				shade0 += float(shadowDepth.y + bias < spos.z);
 			}
 		}
-		shade /= 9.0f; avd /= 9.0f;
-		thickness = distance(spos.z, avd) * 64.0 * shade;
+		const float d25f = 1.0 / 9.0;
+		shade *= d25f; avd *= d25f; shade0 *= d25f;
+		#ifdef COLORFUL_SHADOW
+		vec3 shadowcolor = texture2D(shcolor, spos.xy).rgb * luma(suncolor) * 0.4;
+		color = mix(color, shadowcolor, shade0 * 0.9);
+		#endif
+		thickness = distance(spos.z, avd.x) * 64.0 * shade;
 		#endif
 	#else
-		float M1;
-		shade = shadowTexSmooth(smap, spos, bias, M1);
+		float M1, M2;
+		shade = shadowTexSmooth(shadowtex1, spos, bias, M1);
+		shade0 = shadowTexSmooth(smap, spos, bias, M2);
+		#ifdef COLORFUL_SHADOW
+		vec3 shadowcolor = texture2D(shcolor, spos.xy).rgb * luma(suncolor) * 0.4;
+		color = mix(color, shadowcolor, shade0 * 0.9);
+		#endif
 		thickness = distance(spos.z, M1) * 64.0 * shade;
 	#endif
 
@@ -160,17 +184,6 @@ float light_fetch_shadow(sampler2D smap, in float bias, in vec3 spos, out float 
 
 	return shade;
 }
-
-#define COLORFUL_SHADOW
-
-#ifdef COLORFUL_SHADOW
-void colorShadow(in sampler2D shcolor, in float shadow, in float shadow0, in vec3 spos, inout vec3 suncolor) {
-	vec3 shadowcolor = texture2D(shcolor, spos.xy).rgb * luma(suncolor) * 0.6;
-	float useColorTex = shadow0 - shadow;
-	useColorTex = smoothstep(-0.05, 0.2, useColorTex) * shadow0 * 0.9;
-	suncolor = mix(suncolor, shadowcolor, useColorTex);
-}
-#endif
 
 float light_fetch_shadow_fast(sampler2D smap, in float bias, in vec3 spos) {
 	if (spos != clamp(spos, vec3(0.0), vec3(1.0))) return 0.0;

@@ -24,13 +24,12 @@
 #version 120
 #pragma optimize(on)
 
-uniform sampler2D tex;
+uniform sampler2D texture;
 
 varying vec2 texcoord;
-varying vec4 color;
 
 /* DRAWBUFFERS:02 */
 void main() {
-	gl_FragData[0] = texture2D(tex, texcoord);
+	gl_FragData[0] = texture2D(texture, texcoord);
 	gl_FragData[1] = vec4(0.0, 0.0, 0.2, 1.0);
 }

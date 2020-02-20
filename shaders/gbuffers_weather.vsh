@@ -27,7 +27,6 @@
 uniform mat4 gbufferModelViewInverse;
 
 varying vec4 color;
-varying vec2 normal;
 varying vec2 texcoord;
 
 #include "gbuffers.inc.vsh"
@@ -36,12 +35,12 @@ varying vec2 texcoord;
 
 VSH {
 	color = gl_Color;
-	vec4 position = gl_Vertex;
+	/*vec4 position = gl_Vertex;
 	float rand_ang = hash(position.xz);
 	position.x += rand_ang - position.y * 0.3;
 	position.z -= rand_ang;
 	gl_Position = gl_ModelViewMatrix * position;
-	gl_Position = gl_ProjectionMatrix * gl_Position;
-	normal = normalEncode(gl_NormalMatrix * vec3(0.0, 1.0, 0.0));
+	gl_Position = gl_ProjectionMatrix * gl_Position;*/
+	gl_Position = ftransform();
 	texcoord = (gl_TextureMatrix[0] * gl_MultiTexCoord0).st;
 }

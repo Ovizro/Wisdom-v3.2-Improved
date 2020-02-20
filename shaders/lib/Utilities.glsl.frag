@@ -97,7 +97,7 @@ vec3 getLightColor(float ColorTemperature) {
 		- linearstep(20000.0, 40000.0, ColorTemperature)) * c200\
 		+ (linearstep(20000.0, 40000.0, ColorTemperature)) * c400);
 
-	lightColor /= max(dot(lightColor, vec3(0.3333)), (1.0 - smoothstep(500.0, 800.0, ColorTemperature)));
+	//lightColor /= max(dot(lightColor, vec3(0.3333)), (1.0 - smoothstep(500.0, 800.0, ColorTemperature)));
 
     return lightColor;
 }
@@ -248,7 +248,7 @@ float get_exposure() {
 	float basic_exp = EXPOSURE * (1.8 - clamp(pow(eyeBrightnessSmooth.y / 240.0, 6.0) * luma(suncolor), 0.0, 1.2));
 
 	#ifdef BLOOM
-	vec3 center = texture2D(gcolor, vec2(0.5) * 0.125 + vec2(0.0f, 0.25f) + vec2(0.000f, 0.025f)).rgb;
+	vec3 center = texture2D(colortex0, vec2(0.5) * 0.125 + vec2(0.0f, 0.25f) + vec2(0.000f, 0.025f)).rgb;
 	#else
 	vec3 center = texture2D(composite, vec2(0.5)).rgb;
 	#endif

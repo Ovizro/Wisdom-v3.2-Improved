@@ -22,10 +22,7 @@
 // =============================================================================
 
 #version 120
-
-
 #include "/lib/compat.glsl"
-
 #pragma optimize(on)
 
 //#define SMOOTH_TEXTURE
@@ -34,6 +31,7 @@
 
 uniform sampler2D texture;
 uniform sampler2D specular;
+
 #ifdef NORMALS
 uniform sampler2D normals;
 #else
@@ -45,6 +43,8 @@ varying vec4 coords;
 varying vec4 wdata;
 
 varying float dis;
+varying vec3 wpos;
+varying float top;
 
 #define normal wdata.xyz
 #define flag wdata.w
@@ -60,6 +60,23 @@ f16vec2 normalEncode(f16vec3 n) {return sqrt(-n.z*0.125f+0.125f) * normalize(n.x
 #endif
 
 uniform ivec2 atlasSize;
+uniform vec3 BiomeType;
+uniform float wetness;
+uniform vec3 cameraPosition;
+uniform float rainStrength;
+uniform float frameTimeCounter;
+uniform int worldTime;
+
+//#define WorldTimeAnimation
+
+#ifdef WorldTimeAnimation
+float frametime = float(worldTime)/20.0;
+#else
+float frametime = frameTimeCounter;
+#endif
+
+float rain0 = rainStrength * smoothstep(0.0, 0.5, BiomeType.y);
+//float Bwetness = wetness * smoothstep(0.0, 0.5, BiomeType.y);
 
 #define ParallaxOcclusion
 #ifdef ParallaxOcclusion
@@ -156,6 +173,79 @@ vec2 ParallaxMapping(in vec2 coord) {
 //#define SPECULAR_TO_PBR_CONVERSION
 //#define CONTINUUM2_TEXTURE_FORMAT
 
+#define NEW_RAIN_SPLASHES
+#define RAIN_SPLASH_LEVEL 1.0 //[0.5 0.6 0.7 0.8 0.9 1.0 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2.0]
+
+vec2 getWetness(inout vec4 sp, float height) {
+	#ifdef NEW_RAIN_SPLASHES
+	float wet0 = BiomeType.x * min(wetness * 6, 1.0) * 3.8 * smoothstep(0.5, 1.0, BiomeType.y) * RAIN_SPLASH_LEVEL;
+	float rH = wet0 * plus(sp.r, sp.g) * smoothstep(0.92, 1.0, lmcoord.y) * top;
+	float isWater = step(height, rH * 1.2);
+	wet0 *= smoothstep(0.8, 1.0, lmcoord.y);
+	sp.r = mix(plus(sp.r, wet0 * sp.g * 0.7), 0.95, isWater);
+	sp.g = mix(sp.g, 0.03, isWater);
+	sp.b = max(sp.b - wet0 * 0.1 - isWater * 0.4, 0.0);
+	return vec2(isWater, (wet0 * 0.5 + isWater) * (1.0- plus(sp.g, sp.r)));
+	#else
+	return vec2(0.0, 1.0);
+	#endif
+}
+
+#define RAIN_SPLASH_WAVE
+
+#ifdef RAIN_SPLASH_WAVE
+#define hash_fast(p) fract(mod(p.x, 1.0) * 73758.23f - p.y)
+
+float16_t hash(f16vec2 p) {
+	vec3 p3 = fract(vec3(p.xyx) * 0.2031);
+	p3 += dot(p3, p3.yzx + 19.19);
+	return fract((p3.x + p3.y) * p3.z);
+}
+
+float16_t noise(f16vec2 p) {
+	f16vec2 i = floor(p);
+	f16vec2 f = fract(p);
+	f16vec2 u = (f * f) * fma(f16vec2(-2.0f), f, f16vec2(3.0f));
+	return fma(2.0f, mix(
+		mix(hash(i),                      hash(i + f16vec2(1.0f,0.0f)), u.x),
+		mix(hash(i + f16vec2(0.0f,1.0f)), hash(i + f16vec2(1.0f,1.0f)), u.x),
+	u.y), -1.0f);
+}
+#endif
+
+//const int off = 0, low = 1, medium = 2, high = 3, ultra = 4;
+#define RAIN_SPLASH_GUALITY low //[off low medium high ultra]
+
+float saturate(float x)
+{
+	return clamp(x, 0.0, 1.0);
+}
+
+vec3 saturate(vec3 x)
+{
+	return clamp(x, vec3(0.0), vec3(1.0));
+}
+
+vec2 saturate(vec2 x)
+{
+	return clamp(x, vec2(0.0), vec2(1.0));
+}
+
+#if RAIN_SPLASH_GUALITY == ultra
+#include "/lib/Ripple.glsl"
+#elif RAIN_SPLASH_GUALITY != off
+uniform sampler2D gaux1;
+uniform sampler2D gaux2;
+uniform sampler2D gaux3;
+#include "/lib/Ripple2.glsl"
+#endif
+
+/*vec3 numTest(float x) {
+	if (x > 1) return vec3(x, 0.0, 0.0);
+	else if (x < 0) return vec3(0.0, 0.0, x);
+	else return vec3(x);
+}*/
+
 /* DRAWBUFFERS:0245 */
 void main() {
 	vec2 texcoord_adj = texcoord;
@@ -169,33 +259,60 @@ void main() {
 	t.rgb *= parallax_lit;
 	#endif
 
-	gl_FragData[0] = t * color;
-	#ifdef NORMALS
-		f16vec2 n2 = normalEncode(normal);
-		f16vec3 normal2 = normal;
-		if (dis < 64.0) {
-			normal2 = texture2D(normals, texcoord_adj).xyz * 2.0 - 1.0;
-			const float16_t bumpmult = 0.5;
-			normal2 = normal2 * bumpmult + vec3(0.0f, 0.0f, 1.0f - bumpmult);
-			f16mat3 tbnMatrix = mat3(tangent, binormal, normal);
-			normal2 = tbnMatrix * normal2;
-		}
-		vec2 d = normalEncode(normal2);
-		if (!(d.x > 0.0 && d.y > 0.0)) d = n2;
-		gl_FragData[1] = vec4(d, flag, 1.0);
-	#else
-		gl_FragData[1] = vec4(n2, flag, 1.0);
-	#endif
+	vec4 sp; vec2 nor2;
 	#ifdef SPECULAR_TO_PBR_CONVERSION
 	vec3 spec = texture2D(specular, texcoord_adj).rgb;
-	float spec_strength = dot(spec, vec3(0.3, 0.6, 0.1));
-	gl_FragData[2] = vec4(spec_strength, spec_strength, 0.0, 0.0);
+	float spec_strength = dot(spec, mix(vec3(0.4, 0.4, 0.2), vec3(0.3, 0.6, 0.1), wetness));
+	sp = vec4(spec_strength, spec_strength, 0.0, 1.0);
 	#else
 	#ifdef CONTINUUM2_TEXTURE_FORMAT
-	gl_FragData[2] = texture2D(specular, texcoord_adj).brga;
+	sp = texture2D(specular, texcoord_adj).brga;
 	#else
-	gl_FragData[2] = texture2D(specular, texcoord_adj);
+	sp = texture2D(specular, texcoord_adj);
 	#endif
 	#endif
+	#ifdef NORMALS
+		vec4 norMap = texture2D(normals, texcoord_adj);
+		vec2 wet = getWetness(sp, norMap.w);
+		t *= 1.0 - wet.y * 0.4;
+		
+		vec3 N = normal;
+		f16vec3 normal2 = normal;
+		if (dis < 64.0) {
+			#ifdef RAIN_SPLASH_WAVE
+			N.x += noise(wpos.xz * 5.0 - vec2(frametime * 2.0, 0.0)) * 0.04 * wet.x * (1.0 + rain0);
+			N.y -= noise(wpos.xz * 6.0 - vec2(frametime * 2.0, 0.0)) * 0.04 * wet.x * (1.0 + rain0);
+			#endif
+			//vec3 rainNormal = vec3(0.0);
+			#if RAIN_SPLASH_GUALITY == ultra
+			vec3 rainNormal = GetRipplesNormal(wpos, 3.0);
+			#elif RAIN_SPLASH_GUALITY != off
+			vec3 rainNormal = GetRainNormal(wpos, 3.0);
+			#endif
+			normal2 = norMap.xyz * 2.0 - 1.0;
+			//rainNormal = rainNormal * 2.0 + 1.0;
+			const float16_t bumpmult = 0.5;
+			normal2 = normal2 * bumpmult + vec3(0.0f, 0.0f, 1.0f - bumpmult);
+			//rainNormal = rainNormal * bumpmult + vec3(0.0f, 0.0f, 1.0f - bumpmult);
+			
+			f16mat3 tbnMatrix = mat3(tangent, binormal, normal);
+			normal2 = tbnMatrix * normal2;
+			#if RAIN_SPLASH_GUALITY != off
+			rainNormal = tbnMatrix * rainNormal;
+			N += rainNormal;
+			#endif
+		}
+		N = normalize(N);//  + vec4(rainNormal
+		f16vec2 n2 = normalEncode(N);
+		vec2 d = normalEncode(normal2);
+		//if (!(d.x > 0.0 && d.y > 0.0)) d = n2;
+		nor2 = mix(n2, d, min((1.0 - wet.x), Cselect(d, 0.0, 1.0)));
+	#else
+		nor2 = n2;
+	#endif
+	
+	gl_FragData[0] = t * color;//vec4(-rainNormal, 1.0);//vec4(numTest(wet.y), 1.0);//
+	gl_FragData[1] = vec4(nor2, flag, 1.0);
+	gl_FragData[2] = sp;
 	gl_FragData[3] = vec4(lmcoord, n2);
 }

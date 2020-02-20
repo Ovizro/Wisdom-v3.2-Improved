@@ -30,31 +30,9 @@ const bool compositeMipmapEnabled = true;
 
 vec4 mclight = texture2D(gaux2, texcoord);
 
-#define WaterColor 1 // [0 1 2 3 4 5 6]
-//0 Orginal || 1 New || 2 Green || 3 Blue || 4 Blood || 5 Clear || 6 Costom
-#define WaterFogColor_R 0.1 //[0.001 0.05 0.1 0.15 0.2 0.25 0.3 0.35 0.4 0.45 0.5 0.55 0.6 0.65 0.7 0.75 0.8 0.85 0.9 0.95 1.0 1.05 1.1 1.15 1.2 1.25 1.3 1.35 1.4 1.45 1.5 1.6 1.7 1.8 1.9 2.0]
-#define WaterFogColor_G 0.6 //[0.001 0.05 0.1 0.15 0.2 0.25 0.3 0.35 0.4 0.45 0.5 0.55 0.6 0.65 0.7 0.75 0.8 0.85 0.9 0.95 1.0 1.05 1.1 1.15 1.2 1.25 1.3 1.35 1.4 1.45 1.5 1.6 1.7 1.8 1.9 2.0]
-#define WaterFogColor_B 0.8 //[0.001 0.05 0.1 0.15 0.2 0.25 0.3 0.35 0.4 0.45 0.5 0.55 0.6 0.65 0.7 0.75 0.8 0.85 0.9 0.95 1.0 1.05 1.1 1.15 1.2 1.25 1.3 1.35 1.4 1.45 1.5 1.6 1.7 1.8 1.9 2.0]
-#define WaterColor_A 0.2 //[0.0 0.05 0.1 0.15 0.2 0.25 0.3 0.35 0.4 0.45 0.5 0.55 0.6 0.65 0.7 0.75 0.8 0.85 0.9 0.95 1.0]
-#define DeepWaterFogColor_R 0.1 //[0.001 0.05 0.1 0.15 0.2 0.25 0.3 0.35 0.4 0.45 0.5 0.55 0.6 0.65 0.7 0.75 0.8 0.85 0.9 0.95 1.0 1.05 1.1 1.15 1.2 1.25 1.3 1.35 1.4 1.45 1.5 1.6 1.7 1.8 1.9 2.0]
-#define DeepWaterFogColor_G 0.6 //[0.001 0.05 0.1 0.15 0.2 0.25 0.3 0.35 0.4 0.45 0.5 0.55 0.6 0.65 0.7 0.75 0.8 0.85 0.9 0.95 1.0 1.05 1.1 1.15 1.2 1.25 1.3 1.35 1.4 1.45 1.5 1.6 1.7 1.8 1.9 2.0]
-#define DeepWaterFogColor_B 0.8 //[0.001 0.05 0.1 0.15 0.2 0.25 0.3 0.35 0.4 0.45 0.5 0.55 0.6 0.65 0.7 0.75 0.8 0.85 0.9 0.95 1.0 1.05 1.1 1.15 1.2 1.25 1.3 1.35 1.4 1.45 1.5 1.6 1.7 1.8 1.9 2.0]
-#define DeepWaterFogStrength 0.02 //[0.0 0.01 0.02 0.03 0.04 0.05 0.06 0.07 0.08 0.09 0.1]
-#define WaterColorWeight_R 1.0 //[0.001 0.005 0.1 0.2 0.3 0.4 0.5 0.55 0.6 0.65 0.7 0.75 0.8 0.83 0.85 0.87 0.9 0.93 0.95 0.96 0.97 0.98 0.99 1.0 1.01 1.02 1.03 1.04 1.05 1.07 1.1 1.13 1.15 1.17 1.2 1.25 1.3 1.35 1.4 1.45 1.5 1.6 1.7 1.8 1.9 2.0 2.5 3.0 3.5 4.0 4.5 5.0 6.0 7.0 8.0 9.0 10.0]
-#define WaterColorWeight_G 1.0 //[0.001 0.005 0.1 0.2 0.3 0.4 0.5 0.55 0.6 0.65 0.7 0.75 0.8 0.83 0.85 0.87 0.9 0.93 0.95 0.96 0.97 0.98 0.99 1.0 1.01 1.02 1.03 1.04 1.05 1.07 1.1 1.13 1.15 1.17 1.2 1.25 1.3 1.35 1.4 1.45 1.5 1.6 1.7 1.8 1.9 2.0 2.5 3.0 3.5 4.0 4.5 5.0 6.0 7.0 8.0 9.0 10.0]
-#define WaterColorWeight_B 1.0 //[0.001 0.005 0.1 0.2 0.3 0.4 0.5 0.55 0.6 0.65 0.7 0.75 0.8 0.83 0.85 0.87 0.9 0.93 0.95 0.96 0.97 0.98 0.99 1.0 1.01 1.02 1.03 1.04 1.05 1.07 1.1 1.13 1.15 1.17 1.2 1.25 1.3 1.35 1.4 1.45 1.5 1.6 1.7 1.8 1.9 2.0 2.5 3.0 3.5 4.0 4.5 5.0 6.0 7.0 8.0 9.0 10.0]
-
 #define RayStrength 1.0 //[0.5 0.75 1.0 1.25 1.5 1.75 2.0]
-#define FORCE_GROUND_WETNESS
+//#define FORCE_GROUND_WETNESS
 //#define DARK_NIGHT
-
-float waterFogColor0 = select(WaterColor, 0);
-float waterFogColor1 = select(WaterColor, 1);
-float waterFogColor2 = select(WaterColor, 2);
-float waterFogColor3 = select(WaterColor, 3);
-float waterFogColor4 = select(WaterColor, 4);
-float waterFogColor6 = select(WaterColor, 5);
-float waterFogColor5 = select(WaterColor, 6);
 
 Material glossy;
 Material land;
@@ -63,46 +41,6 @@ LightSourcePBR sun;
 Mask mask;
 
 uniform vec3 fogColor;
-
-vec3 getWaterColor() {
-    #if WaterColor == 1|| WaterColor == 0
-    return vec3(2.0, 0.8, 1.0);
-    #elif WaterColor == 2
-    return vec3(2.8,0.4,1.6);
-    #elif WaterColor == 3
-    return vec3(2.4,1.5,0.1);
-    #elif WaterColor == 4
-    return vec3(0.001,4.2,3.4);
-    #elif WaterColor == 5
-    return vec3(1.0);
-    #else
-    const float waterA = (WaterFogColor_G + WaterFogColor_B) / (WaterFogColor_R * WaterColorWeight_R + 0.53);
-    const float waterB = (WaterFogColor_R + WaterFogColor_B) / (WaterFogColor_G * WaterColorWeight_G + 0.53);
-    const float waterC = (WaterFogColor_R + WaterFogColor_G) / (WaterFogColor_B * WaterColorWeight_B + 0.53);
-
-    return vec3(waterA,waterB,waterC) * 0.1;
-    #endif
-}
-
-vec3 getWaterFogColor(float light) {
-    #if WaterColor == 0
-    return vec3(0.1,0.6,0.8) * light;
-    #elif WaterColor == 1
-    return mix(vec3(0.0015,0.025,0.05) * 0.4, vec3(0.1,0.6,0.8), light);
-    #elif WaterColor == 2
-    return mix(vec3(0.0015,0.02,0.03) * 0.4, vec3(0.1,1.0,0.5), light);
-    #elif WaterColor == 3
-    return mix(vec3(0.0005,0.001,0.07) * 0.4, vec3(0.005,0.3,1.2), light);
-    #elif WaterColor == 4
-    return mix(vec3(0.05,0.0023,0.006) * 0.4, vec3(0.8,0.015,0.03) * 0.73, light);
-    #elif WaterColor == 5
-    return mix(vec3(0.0015,0.02,0.03) * 0.4, vec3(0.03, 0.15, 0.4), light);
-    #else
-    return mix(vec3(DeepWaterFogColor_R, DeepWaterFogColor_G, DeepWaterFogColor_B) * DeepWaterFogStrength * 0.4, vec3(WaterFogColor_R,WaterFogColor_G,WaterFogColor_B), light);
-    #endif
-}
-
-//void waterRender(inout vec3 color, float shader, )
 
 float sum4_depth_bias(sampler2D buf, sampler2D depth, float cutoff, vec2 uv, ivec2 offset) {
   vec4 c = textureGatherOffset(buf, uv, offset);
@@ -176,10 +114,10 @@ void main() {
 			float lod = pow(max(water_plain_normal.y, 0.0), 4.0);
 
 			#ifdef WATER_PARALLAX
-			vec3 wpos0;
-			WaterParallax(wpos0, lod);
-			//if (lod > 0.0) WaterParallax(glossy.wpos, lod);
-			glossy.wpos = mix(wpos0, glossy.wpos, step(0.0, lod));
+			//vec3 wpos0;
+			//WaterParallax(wpos0, lod);
+			if (lod > 0.0) WaterParallax(glossy.wpos, lod);
+			//glossy.wpos = mix(wpos0, glossy.wpos, step(0.0, lod));
 			float wave = getwave2(glossy.wpos + cameraPosition, lod);
 			#else
 			float wave = getwave2(glossy.wpos + cameraPosition, lod);
@@ -201,24 +139,28 @@ void main() {
 			// Refraction
 			#ifdef WATER_REFRACTION
 			float l = min(32.0, length(land.vpos - glossy.vpos));
-			vec3 refract_vpos = refract(glossy.nvpos, glossy.N, mix(1.00029 / 1.33, 1.33 / 1.00029, isEyeInWater1));
-			//vec3 refract_vpos = refract(glossy.nvpos, glossy.N, (isEyeInWater == 1) ? 1.33 / 1.00029 : 1.00029 / 1.33);
+			//vec3 refract_vpos = refract(glossy.nvpos, glossy.N, mix(1.00029 / 1.33, 1.33 / 1.00029, isEyeInWater1));
+			vec3 refract_vpos = refract(glossy.nvpos, glossy.N, (isEyeInWater == 1) ? 1.33 / 1.00029 : 1.00029 / 1.33);
 			if (refract_vpos != vec3(0.0)) {
 				l *= mix((0.2 + max(0.0, dot(glossy.nvpos, glossy.N)) * 0.8), 1.0, isEyeInWater0);
 				//if (isEyeInWater == 0) l *= (0.2 + max(0.0, dot(glossy.nvpos, glossy.N)) * 0.8);
 				vec2 uv = screen_project(refract_vpos * l + glossy.vpos);
 				uv = mix(uv, texcoord, pow(abs(uv - vec2(0.5)) * 2.0, vec2(2.0)));
 
-				land.vpos = fetch_vpos(uv, depthtex1).xyz;
-				land.cdepth = length(land.vpos);
-				land.nvpos = land.vpos / land.cdepth;
-				land.cdepthN = land.cdepth / far;
-
-				color = texture2DLod(composite, uv, 1.0).rgb * 0.7;
-				color += texture2DLod(composite, uv, 2.0).rgb * 0.5;
-				color += texture2DLod(composite, uv, 3.0).rgb * 0.2;
+				//float f0 = texture2D(gaux1, uv).a;
+				//if (f0 < 0.48 || f0 > 0.53) {
+					land.vpos = fetch_vpos(uv, depthtex1).xyz;
+					land.cdepth = length(land.vpos);
+					land.nvpos = land.vpos / land.cdepth;
+					land.cdepthN = land.cdepth / far;
+				
+					color = texture2DLod(composite, uv, 1.0).rgb * 0.7;
+					color += texture2DLod(composite, uv, 2.0).rgb * 0.5;
+					color += texture2DLod(composite, uv, 3.0).rgb * 0.2;
+					color += texture2D(gaux4, uv).rgb;
+				//} 
 			} else {
-				color = vec3(0.0);
+				color = texture2D(gaux4, texcoord).rgb;
 				total_internal_reflection = max(0.0, -dot(glossy.nvpos, glossy.N));
 			}
 			#endif
@@ -261,31 +203,24 @@ void main() {
 		shadow = mix(light_fetch_shadow_fast(shadowtex1, light_shadow_autobias(land.cdepthN), wpos2shadowpos(glossy.wpos)), shadow, (1.0-isEyeInWater0) * max(0.0, sign(flag - 0.98)));
 
 		// Render
-		if (mask.is_water || isEyeInWater == 1) {
+		if (mask.is_water || isEyeInWater >= 1) {
 			float dist_diff = length(glossy.vpos) * isEyeInWater0 + distance(land.vpos, glossy.vpos) * (1 - isEyeInWater);
 			dist_diff += total_internal_reflection * 4.0;
 			float dist_diff_N = min(1.0, dist_diff * 0.0625);
 
 			// Absorption
+			#if WaterColor == 5
+			const float waterA0 = 0.22;
+			#elif WaterColor == 4
+			const float waterA0 = -0.32;
+			#else
+			const float waterA0 = 0.0;
+			#endif
 			float absorption = 2.0 / (dist_diff_N + 1.0) - 1.0;
-			vec3 watercolor = color * (pow(vec3(clamp((absorption + (0.22 * waterFogColor6 - 0.32 * waterFogColor4 + 0.43 * (1.0 - max(float(mask.is_water), float(mask.is_sky))))), 0.1, 1.0)), getWaterColor()));
+			vec3 watercolor = color * pow(vec3(clamp((absorption + waterA0 + 0.43 * (1.0 - max(float(mask.is_water), float(mask.is_sky)))), 0.1, 1.0)), getWaterColor());
 
-			if (isEyeInWater == 0) {
-				float light_att = (max(water_sky_light, 1.0 - shadow) - rain0 * 0.43);
-
-				vec3 waterfog = max(luma(ambient) * 0.18, 0.0) * light_att * getWaterFogColor(1.0);
-
-				color = mix(waterfog , watercolor, clamp((pow(absorption, 2.0) * (1.0 * waterFogColor0 + 1.0 * (waterFogColor1 + waterFogColor2 + waterFogColor3 + waterFogColor5) + 1.2 * waterFogColor4) + (-0.35 * waterFogColor4 + 0.38 * waterFogColor6 + WaterColor_A * waterFogColor5 * 0.1)), 0.1, 0.92));
-			} else {
-				float light_att = (eyeBrightness.y * 0.0215 * (total_internal_reflection + 1.0) - rain0 * 0.3);
-
-				vec3 waterfog = getWaterFogColor(clamp((max(luma(ambient) * 0.18, 0.0) * light_att - 0.05), 0.0, 1.0));
-
-				color = mix(waterfog , watercolor, clamp((pow(absorption, 2.0) + (0.52 * (waterFogColor1 + waterFogColor3) + 0.32 * waterFogColor2 - 0.45 * waterFogColor4 + WaterColor_A * waterFogColor5) + 0.62 * waterFogColor6), 0.1, 0.92));
-				}
-		}else if(isEyeInWater == 2) {
-			vec3 lavaFog = vec3(0.9, 0.2, 0.1);
-			color = mix(color, lavaFog, 0.2);
+			float light_att = (isEyeInWater > 0) ? (eyeBrightness.y * 0.0215 * (total_internal_reflection + 1.0) + 0.01 - rain0 * 0.6):(max(water_sky_light, 1.0 - shadow) - rain0 * 0.43);
+			color = waterRender(watercolor, light_att, absorption);
 		}
 
 		#ifndef SPACE

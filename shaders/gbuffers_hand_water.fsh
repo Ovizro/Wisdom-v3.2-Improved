@@ -24,8 +24,13 @@
 #version 120
 #pragma optimize(on)
 
-/* DRAWBUFFERS:02 */
+//#include "CompositeUniform.glsl.frag"
+
+uniform sampler2D tex;
+
+varying vec2 texcoord;
+
+/* DRAWBUFFERS:7 */
 void main() {
-	gl_FragData[0] = vec4(0.0, 0.0, 0.0, 1.0);//texture2D(texture, texcoord).rrra * 4 * starColor;//
-	gl_FragData[1] = vec4(0.0, 0.0, 0.2, 1.0);
+	gl_FragData[0] = texture2D(tex, texcoord);
 }

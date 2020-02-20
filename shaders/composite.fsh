@@ -14,11 +14,14 @@ const int gaux3Format = RGBA32F;
 const int gaux4Format = RGBA8;
 const int noiseTextureResolution = 512;
 const int depthtex2Format = RGBA8;
+const int shadowcolor0Format = RGB16;
 
 const float eyeBrightnessHalflife = 13.5f;
-const float wetnessHalflife = 400.0f;
-const float drynessHalflife = 20.0f;
+const float wetnessHalflife = 600.0f;
+const float drynessHalflife = 1200.0f;
 const float centerDepthHalflife = 5.0f;
+
+const bool compositeMipmapEnabled = false;
 
 varying vec2 texcoord;
 
@@ -34,7 +37,6 @@ vec2 mclight = texture2D(gaux2, texcoord).xy;
 
 Mask mask;
 Material land;
-
 
 void main() {
 	// rebuild hybrid flag
@@ -59,7 +61,7 @@ void main() {
 	}
 
 	// rebuild hybrid data
-	vec4 specular_data = flag > 0.89f ? texture2D(gaux4, texcoord) : texture2D(gaux1, texcoord);
+	vec4 specular_data = texture2D(gaux1, texcoord);//flag > 0.89f ? texture2D(gaux4, texcoord) : 
 	specular_data.a = flag;
 
 /* DRAWBUFFERS:234 */

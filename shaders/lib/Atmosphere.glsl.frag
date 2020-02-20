@@ -164,102 +164,7 @@ void calc_fog_height(Material mat, in float16_t start, in float16_t end, inout f
 	original = mix(original, col, coeif);
 }
 
-const f16vec3 vaporRGB = vec3(0.6) + skyRGB * 0.5;
-f16vec3 mist_color = vaporRGB * f16vec3(luma(suncolor) * 0.1);
-
-#define STARS
-#define STAR_COLOR_TEMPERATURE 7000.0 //[2000.0 3000.0 4000.0 5000.0 6000.0 7000.0 8000.0 9000.0 10000.0 12000.0 40000.0]
-#define STAR_LIGHT_LEVEL 0.3 //[0.1 0.2 0.3 0.5 0.7 1.0 1.5]
-#define STAR_DENSITY 1.8 //[1.0 1.2 1.5 1.8 2.0 2.5]
-
-#ifdef STARS
-vec3 getStars(vec3 wpos, vec3 fragpos, vec3 light_n){
-	wpos.y -= cameraPosition.y;
-	vec3 intersection = wpos/(wpos.y+length(wpos.xz));
-	vec2 wind = vec2(frametime * 0.5,0.0);
-	vec2 coord = intersection.xz*0.3+cameraPosition.xz*0.0001+wind*0.00125;
-	coord *= STAR_DENSITY;
-	
-	float NdotU = pow(max(dot(normalize(fragpos),normalize(upPosition)),0.0),0.25);
-	
-	float star  = texture2D(noisetex,coord.xy).r;
-		  star *= texture2D(noisetex,coord.xy+0.1).r;
-		  star *= texture2D(noisetex,coord.xy+0.23).r;
-		  star *= texture2D(noisetex,coord.xy+0.456).r;
-		  star *= texture2D(noisetex,coord.xy+0.7891).r;
-		  star  = max(star-0.2,0.0)*10.0*NdotU*(1.0-rain0)*Time.w;
-		
-	return star*pow(light_n,vec3(0.8)) * STAR_LIGHT_LEVEL;
-}
-#endif
-
-#ifdef PHYSICAL_SKY
-f16vec3 calc_atmosphere(in f16vec3 sphere, in f16vec3 vsphere) {
-	float16_t VdotS = dot(vsphere, lightPosition);
-	VdotS = max(VdotS, 0.0) * (1.0 - extShadow);
-	vec3 nwpos = normalize(sphere - vec3(0.0, 82.0, 0.0));
-	vec3 skyColor = scatter(vec3(0., 19.82e2, 0.), nwpos, worldLightPosition * (1.0 - nTime.y * 0.6) * (1.0 - rain0 * 0.5), Ra) * (1.0 - rain0 * 0.8);
-	
-	#ifdef STARS
-	vec3 star = getStars(sphere, vsphere, getLightColor(STAR_COLOR_TEMPERATURE));
-	return skyColor + star;
-	#else
-	return skyColor;
-	#endif
-}
-#else
-f16vec3 calc_atmosphere(in f16vec3 sphere, in f16vec3 vsphere) {
-	float16_t h = pow(max(normalize(sphere).y, 0.0), 2.0);
-	f16vec3 at = skyRGB;
-
-	at = mix(at, f16vec3(0.7), max(0.0, cloud_coverage));
-	at *= 1.0 - (0.5 - rain0 * 0.3) * h;
-
-	float16_t h2 = pow(max(0.0, 1.0 - h * 1.4), 2.0);
-	at += h2 * mist_color * clamp(length(sphere) / 512.0, 0.0, 1.0) * 3.5;
-
-	float16_t VdotS = dot(vsphere, lightPosition);
-	VdotS = max(VdotS, 0.0) * (1.0 - extShadow);
-	//float lSun = luma(suncolor);
-	at = mix(at, suncolor + ambient, smoothstep(0.1, 1.0, h2 * pow(VdotS, fma(worldLightPosition.y, 2.0, 1.0))));
-	at *= max(0.0, luma(ambient) * 1.2 - 0.02);
-
-	at += suncolor * 0.009 * VdotS * (0.7 + cloud_coverage);
-	//at += suncolor * 0.011 * pow(VdotS, 4.0) * (0.7 + cloud_coverage);
-	at += suncolor * 0.015 * pow(VdotS, 8.0) * (0.7 + cloud_coverage);
-	at += suncolor * 0.22 * pow(VdotS, 30.0) * (0.7 + cloud_coverage);
-
-	//at += suncolor * 0.3 * pow(VdotS, 4.0) * rain0;
-
-	return at;
-}
-#endif
-
 const f16mat2 octave_c = f16mat2(1.4,1.2,-1.2,1.4);
-
-f16vec4 calc_clouds(in f16vec3 sphere, in f16vec3 cam, float16_t dotS, in vec3 sunraw) {
-	if (sphere.y < 0.0) return f16vec4(0.0);
-
-	f16vec3 c = sphere / max(sphere.y, 0.001) * 768.0;
-	c += noise((c.xz + cam.xz) * 0.001 + frametime * 0.01) * 200.0 / sphere.y;
-	f16vec2 uv = (c.xz + cam.xz);
-
-	uv.x += frametime * 10.0;
-	uv *= 0.002;
-	uv.y *= 0.75;
-	float16_t n  = noise(uv * f16vec2(0.5, 1.0)) * 0.5;
-		uv += f16vec2(n * 0.5, 0.3) * octave_c; uv *= 3.0;
-		  n += noise(uv) * 0.25;
-		uv += f16vec2(n * 0.9, 0.2) * octave_c + f16vec2(frametime * 0.1, 0.2); uv *= 3.01;
-		  n += noise(uv) * 0.105;
-		uv += f16vec2(n * 0.4, 0.1) * octave_c + f16vec2(frametime * 0.03, 0.1); uv *= 3.02;
-		  n += noise(uv) * 0.0625;
-	n = smoothstep(0.0, 1.0, n + cloud_coverage);
-
-	n *= smoothstep(0.0, 140.0, sphere.y);
-
-	return f16vec4(mist_color + pow(dotS, 3.0) * (1.0 - n) * sunraw * dot(nTime, vec4(1.0, 0.2, 1.0, 4.2))* dot(Time, vec4(2.5, 1.6, 2.8, 4.3)) * (1.0 - extShadow), 0.5 * n);
-}
 
 float calc_clouds0(in vec3 sphere, in vec3 cam) {
 	if (sphere.y < 0.0) return 0.0;
@@ -309,6 +214,112 @@ vec3 project_uv2skybox(vec2 uv) {
 	vec2 rad = uv * 4.0 * PI;
     rad.y -= PI * 0.5;
     return normalize(vec3(cos(rad.x) * cos(rad.y), sin(rad.y), sin(rad.x) * cos(rad.y)));
+}
+
+const f16vec3 vaporRGB = vec3(0.6) + skyRGB * 0.5;
+f16vec3 mist_color = vaporRGB * f16vec3(luma(suncolor) * 0.1);
+
+#ifndef _GBUFFER_SHADER_
+#define STARS
+#define STAR_COLOR_TEMPERATURE 7000.0 //[2000.0 3000.0 4000.0 5000.0 6000.0 7000.0 8000.0 9000.0 10000.0 12000.0 40000.0]
+#define STAR_LIGHT_LEVEL 0.3 //[0.1 0.2 0.3 0.5 0.7 1.0 1.5]
+#define STAR_DENSITY 1.8 //[1.0 1.2 1.5 1.8 2.0 2.5]
+
+#ifdef STARS
+vec3 getStars(vec3 wpos, vec3 fragpos, vec3 light_n){
+	wpos.y -= cameraPosition.y;
+	vec3 intersection = wpos/(wpos.y+length(wpos.xz));
+	vec2 wind = vec2(frametime * 0.5,0.0);
+	vec2 coord = intersection.xz*0.3+cameraPosition.xz*0.0001+wind*0.00125;
+	coord *= STAR_DENSITY;
+	
+	float NdotU = pow(max(dot(normalize(fragpos),normalize(upPosition)),0.0),0.25);
+	
+	float star  = texture2D(noisetex,coord.xy).r;
+		  star *= texture2D(noisetex,coord.xy+0.1).r;
+		  star *= texture2D(noisetex,coord.xy+0.23).r;
+		  star *= texture2D(noisetex,coord.xy+0.456).r;
+		  star *= texture2D(noisetex,coord.xy+0.7891).r;
+		  star  = max(star-0.2,0.0)*10.0*NdotU*(1.0-rain0)*Time.w;
+		
+	return star*pow(light_n,vec3(0.8)) * STAR_LIGHT_LEVEL;
+}
+#endif
+
+#ifdef PHYSICAL_SKY
+f16vec3 calc_atmosphere(in f16vec3 sphere, in f16vec3 vsphere) {
+	float16_t VdotS = dot(vsphere, lightPosition);
+	VdotS = max(VdotS, 0.0) * (1.0 - extShadow);
+	vec3 nwpos = normalize(sphere - vec3(0.0, 82.0, 0.0));
+	vec3 skyColor = scatter(vec3(0., 2e3 + cameraPosition.y, 0.), nwpos, worldLightPosition * (1.0 - nTime.y * 0.6) * (1.0 - rain0 * 0.5), Ra) * (1.0 - rain0 * 0.8);
+	
+	//skyColor += suncolor * 0.009 * VdotS * (0.7 + cloud_coverage);
+	//skyColor += suncolor * 0.011 * pow(VdotS, 4.0) * (0.7 + cloud_coverage);
+	//skyColor += suncolor * 0.015 * pow(VdotS, 8.0) * (0.7 + cloud_coverage);
+	skyColor += suncolor * 0.22 * pow(VdotS, 30.0) * (0.7 + cloud_coverage);
+	
+	#ifdef STARS
+	vec3 star = getStars(sphere, vsphere, getLightColor(STAR_COLOR_TEMPERATURE));
+	return skyColor + star;
+	#else
+	return skyColor;
+	#endif
+}
+#else
+f16vec3 calc_atmosphere(in f16vec3 sphere, in f16vec3 vsphere) {
+	float16_t h = pow(max(normalize(sphere).y, 0.0), 2.0);
+	f16vec3 at = skyRGB;
+
+	at = mix(at, f16vec3(0.7), max(0.0, cloud_coverage));
+	at *= 1.0 - (0.5 - rain0 * 0.3) * h;
+
+	float16_t h2 = pow(max(0.0, 1.0 - h * 1.4), 2.0);
+	at += h2 * mist_color * clamp(length(sphere) / 512.0, 0.0, 1.0) * 3.5;
+
+	float16_t VdotS = dot(vsphere, lightPosition);
+	VdotS = max(VdotS, 0.0) * (1.0 - extShadow);
+	//float lSun = luma(suncolor);
+	at = mix(at, suncolor + ambient, smoothstep(0.1, 1.0, h2 * pow(VdotS, fma(worldLightPosition.y, 2.0, 1.0))));
+	at *= max(0.0, luma(ambient) * 1.2 - 0.02);
+
+	at += suncolor * 0.009 * VdotS * (0.7 + cloud_coverage);
+	//at += suncolor * 0.011 * pow(VdotS, 4.0) * (0.7 + cloud_coverage);
+	at += suncolor * 0.015 * pow(VdotS, 8.0) * (0.7 + cloud_coverage);
+	at += suncolor * 0.22 * pow(VdotS, 30.0) * (0.7 + cloud_coverage);
+
+	//at += suncolor * 0.3 * pow(VdotS, 4.0) * rain0;
+
+	#ifdef STARS
+	vec3 star = getStars(sphere, vsphere, getLightColor(STAR_COLOR_TEMPERATURE));
+	return at + star;
+	#else
+	return at;
+	#endif
+}
+#endif
+
+f16vec4 calc_clouds(in f16vec3 sphere, in f16vec3 cam, float16_t dotS, in vec3 sunraw) {
+	if (sphere.y < 0.0) return f16vec4(0.0);
+
+	f16vec3 c = sphere / max(sphere.y, 0.001) * 768.0;
+	c += noise((c.xz + cam.xz) * 0.001 + frametime * 0.01) * 200.0 / sphere.y;
+	f16vec2 uv = (c.xz + cam.xz);
+
+	uv.x += frametime * 10.0;
+	uv *= 0.002;
+	uv.y *= 0.75;
+	float16_t n  = noise(uv * f16vec2(0.5, 1.0)) * 0.5;
+		uv += f16vec2(n * 0.5, 0.3) * octave_c; uv *= 3.0;
+		  n += noise(uv) * 0.25;
+		uv += f16vec2(n * 0.9, 0.2) * octave_c + f16vec2(frametime * 0.1, 0.2); uv *= 3.01;
+		  n += noise(uv) * 0.105;
+		uv += f16vec2(n * 0.4, 0.1) * octave_c + f16vec2(frametime * 0.03, 0.1); uv *= 3.02;
+		  n += noise(uv) * 0.0625;
+	n = smoothstep(0.0, 1.0, n + cloud_coverage);
+
+	n *= smoothstep(0.0, 140.0, sphere.y);
+
+	return f16vec4(mist_color + pow(dotS, 3.0) * (1.0 - n) * sunraw * dot(nTime, vec4(1.0, 0.2, 1.0, 4.2))* dot(Time, vec4(2.5, 1.6, 2.8, 4.3)) * (1.0 - extShadow), 0.5 * n);
 }
 
 #define CLOUDS 3 // [0 1 2 3]
@@ -400,6 +411,10 @@ vec3 calc_sky(in vec3 sphere, in vec3 vsphere, in vec3 cam, in vec3 sunraw) {
 
 	vec4 clouds = calc_clouds(sphere - vec3(0.0, cam.y, 0.0), cam, max(dotS, 0.0), sunraw);
 	sky = mix(sky, clouds.rgb, clouds.a);
+	
+	/*vec4 uv = gbufferProjection * vec4(vsphere, 1.0);
+	uv = uv / uv.w * 0.5 + 0.5;
+	sky += texture2D(colortex0, uv.st).rgb * 0.05; */
 
 	#if CLOUDS == 3
 	vec4 VClouds = volumetric_clouds(sphere - vec3(0.0, cam.y, 0.0), cam, max(dotS, 0.0), sunraw);
@@ -415,24 +430,12 @@ vec3 calc_sky_with_sun(in vec3 sphere, in vec3 vsphere, in vec3 sunraw, in vec3 
 	float dotS = dot(vsphere, lightPosition);
 
 	float ground_cover = smoothstep(30.0, 60.0, sphere.y - cameraPosition.y);
-	sky += suncolor * (pow(smoothstep(0.9962, 0.99998, abs(dotS)), 24.0) * (1.0 - rain0) * (8.0 - 4.0 * Time.w) * ground_cover);
+	sky += suncolor * (pow(smoothstep(0.9962, 0.99998, abs(dotS)), 24.0) * (1.0 - rain0) * (1.0 - Time.w) * ground_cover * 8);
+	sky += texture2D(colortex0, texcoord).rgb * 0.05;
 	
 	#if CLOUDS >= 1
-	#ifdef NEW_2D_CLOUD
-	vec3 nwpos = project_uv2skybox(texcoord);
-
-    float mu_s = dot(nwpos, worldLightPosition);
-    float mu = abs(mu_s);
-	
-	float cmie = calc_clouds0(nwpos * 512.0, cameraPosition);
-
-    float opmu2 = 1. + mu*mu;
-    float phaseM = .1193662 * (1. - g2) * opmu2 / ((2. + g2) * pow(1. + g2 - 2.*g*mu, 1.5));
-    sky += (luma(ambientU) + sunraw * phaseM * 0.2) * cmie;
-	#else
 	vec4 clouds = calc_clouds(sphere - vec3(0.0, cameraPosition.y, 0.0), cameraPosition, max(dotS, 0.0), sunraw);
 	sky = mix(sky, clouds.rgb, clouds.a);
-	#endif
 	#endif
 
 	#if CLOUDS >= 2
@@ -443,8 +446,9 @@ vec3 calc_sky_with_sun(in vec3 sphere, in vec3 vsphere, in vec3 sunraw, in vec3 
 	VClouds.a = VClouds1.a;
 	sky = mix(sky, VClouds.rgb, VClouds.a);
 	#endif
-
-	return mix(mix(sky, vec3(dot(sky, vec3(1.2))), rain0 *0.76), vec3(0.1, 0.15, 0.25) * 0.15 * (1.0 - Time.w * 0.5), rain0 * (1.0 - dot(sky, vec3(3.3))));
+	
+	//return sky;
+	return mix(mix(sky, vec3(dot(sky, vec3(1.2))), rain0 *0.76), vec3(0.12, 0.15, 0.25) * 0.15 * (1.0 - Time.w * 0.5), rain0 * (1.0 - dot(sky, vec3(3.3))));
 }
 
 #define CrespecularRays 2 //[0 1 2 3 5 8 99]
@@ -491,6 +495,7 @@ float VL(in vec3 owpos, out float vl) {
 
 	return (max(0.0, adj_depth - shadowDistance) + total) * weight / 768.0f;
 }
+#endif
 #endif
 
 #endif

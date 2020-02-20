@@ -9,7 +9,7 @@ vec3 vignette(vec3 color) {
     float dist = distance(texcoord, vec2(0.5f));
     dist = dist * 1.7 - 0.65;
     dist = smoothstep(0.0, 1.0, dist);
-    return mix(color, vignetteColor, dist);
+    return mix(color, vignetteColor, dist);//vec3(hurt);//
 }
 #endif
 
@@ -37,6 +37,7 @@ struct Tone {
 
 uniform float nightVision;
 uniform float blindness;
+uniform float valLive;
 
 float getLightness(vec3 rgbColor) {
     float r = rgbColor.r, g = rgbColor.g, b = rgbColor.b;
@@ -88,9 +89,9 @@ float hueToRgb(float v1, float v2, float vH) {
 }
 
 vec3 hslToRgb(vec3 hslColor) {
-    hslColor = clamp(hslColor, vec3(0.0), vec3(1.0));
+    hslColor.tp = clamp(hslColor.tp, 0.0, 1.0);
     float r, g, b;
-    float h = hslColor.r, s = hslColor.g, l = hslColor.b;
+    float h = fract(hslColor.r), s = hslColor.g, l = hslColor.b;
     
     float v1, v2;
     v2 = mix(l * (1.0 + s), (l + s) - (s * l), step(0.5,  l));
@@ -361,20 +362,16 @@ vec3 tonemap(in vec3 color, float adapted_lum) {
 	const float e = 0.14f;
 	const vec3 f = vec3(13.134f);
 	
+	//return (color*(a*color+b))/(color*(c*color+d)+e);
+	
 	color = pow(color, vec3(1.4));
 	color *= (4.0 - rain0 * 3.0);
 	//color = clamp(color, vec3(0.0), vec3(1.0));
 	//color = pow(color, vec3(1.07, 1.04, 1.0));
 	
 	vec3 curr = (color*(a*color+b))/(color*(c*color+d)+e);
-	vec3 whiteScale = 1.0f/((f*(a*f+b))/(f*(c*f+d)+e));
-	color = curr*whiteScale;
-
-	#ifdef VIGNETTE
-	color = vignette(color);
-	#endif
-
-	return pow(color, agamma);
+	vec3 whiteScale = 1.0f / ((f*(a*f+b))/(f*(c*f+d)+e));
+	return curr*whiteScale;
 }
 
 void Hue_Adjustment(inout Tone t) {
@@ -385,6 +382,8 @@ void Hue_Adjustment(inout Tone t) {
 	// This will turn it into gamma space
 	#ifdef BLACK_AND_WHITE
 	t.saturation = 0.0;
+	#elif MC_VERSION >= 11202
+	t.saturation *= valLive;
 	#endif
 
 	#ifdef NOISE_AND_GRAIN
@@ -397,28 +396,35 @@ void Hue_Adjustment(inout Tone t) {
 	
 	//tonemap
 	vec3 color = t.color;
-	t.color = mix(t.color, tonemap(color, t.exposure), t.useToneMap);
+	if (t.useToneMap > 0) t.color = mix(t.color, tonemap(color, t.exposure), t.useToneMap);
 	
 	//hue
 	#ifdef HUE_ADJUSTMENT
-	#ifdef TONE_DEBUG
-	if (tex.x < 0.5) {
-	#endif
-		contrast(t.color, t.contrast);
-		saturation(t.color, t.saturation);
+	if (t.useAdjustment > 0) {
+		#ifdef TONE_DEBUG
+		if (tex.x < 0.5) {
+		#endif
+			contrast(t.color, t.contrast);
+			saturation(t.color, t.saturation);
+			if (t.hue != 0 || t.vibrance != 0 || t.s != vec3(0.0) || t.m != vec3(0.0) || t.h != vec3(0.0)) {
+				t.hsl = rgbToHsl(t.color);
+			
+				t.hsl.r += t.hue;
+				vibrance(t.hsl, t.vibrance);
+				t.hsl.b *= t.brightness;
+			
+				t.color = hslToRgb(t.hsl);
 	
-		t.hsl = rgbToHsl(t.color);
-		
-		t.hsl.r += t.hue;
-		vibrance(t.hsl, t.vibrance);
-		t.hsl.b *= t.brightness;
-		
-		t.color = hslToRgb(t.hsl);
-	
-		t.color = colorBalance(t.color, t.hsl.b, t.s, t.m, t.h, t.p);
-	#ifdef TONE_DEBUG
+				t.color = colorBalance(t.color, t.hsl.b, t.s, t.m, t.h, t.p);
+			}
+		#ifdef TONE_DEBUG
+		}
+		#endif
 	}
 	#endif
+	
+	#ifdef VIGNETTE
+	t.color = vignette(t.color);
 	#endif
 	
 	// Apply night vision gamma
@@ -428,5 +434,6 @@ void Hue_Adjustment(inout Tone t) {
 	
 	t.color = mix(color, t.color, t.useAdjustment);
 	//t.color = vignetteColor;
+	t.color = pow(t.color, agamma);
 }
 #endif

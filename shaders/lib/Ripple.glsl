@@ -37,7 +37,7 @@ vec3 voronoi(vec3 position, float rnd)
     vec3 p2 = position;
    	position = vec3(floor(position));  
 	
-	float timer = frameTimeCounter * RIPPLES_SPEED;
+	float timer = frametime * RIPPLES_SPEED;
     
     vec2 yx = vec2(0.0);
 
@@ -119,12 +119,12 @@ float GetRipples(vec3 position, in float wet){
 		ripples += voronoi(position, float(i + 1));
     }
 	
-	return (pl - ripples.x * 0.25) * wet * rainStrength;
+	return (pl - ripples.x * 0.25) * wet * rain0;
 }
 
 vec3 GetRipplesNormal(vec3 position, in float wet) {
 
-	if (rainStrength < 0.01)
+	if (rain0 < 0.01)
 	{
 		return vec3(0.0, 0.0, 1.0);
 	}

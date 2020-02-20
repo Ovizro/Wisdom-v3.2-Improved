@@ -7,6 +7,8 @@ varying vec2 texcoord;
 varying vec3 sunLight;
 varying vec3 sunraw;
 
+const bool compositeMipmapEnabled = false;
+
 #include "GlslConfig"
 
 #include "/lib/CompositeUniform.glsl.frag"

@@ -26,17 +26,21 @@
 // =============================================================================
 
 varying vec2 texcoord;
-//varying vec3 blockId;
 
 varying vec3 sunLight;
 varying vec3 sunraw;
 varying vec3 ambientU;
+
+#define LIGHT_COLOR_TEMPERATURE 2500 //[1000 1250 1500 1750 2000 2250 2500 2750 3000 3250 3500 3750 4000 4250 4500 4750 5000 5250 5500 5750 6000 6250 6500 6750 7000 7250 7500 7750 8000 8250 8500 8750 9000]
+#define LIGHT_LEVEL 0.2 //[0.05 0.1 0.15 0.2 0.25 0.3 0.35 0.4 0.45 0.5 0.55 0.6 0.65 0.7 0.75 0.8 0.85 0.9 0.95 1.0]
 
 #define _VERTEX_SHADER_
 #include "/lib/Utilities.glsl.frag"
 #include "/lib/Atmosphere.glsl.frag"
 
 //attribute vec4 mc_Entity;
+
+varying vec3 torch_color;
 
 void main() {
 	gl_Position = ftransform();
@@ -49,4 +53,7 @@ void main() {
 	sunLight = (sunraw) * f;
 	
 	ambientU = scatter(vec3(0., 25e2, 0.), vec3( 0.0,  1.0,  0.0), worldLightPosition, Ra) * 0.8;
+	
+	torch_color = getLightColor(LIGHT_COLOR_TEMPERATURE * 1.0) * LIGHT_LEVEL * 0.02;
+	
 }

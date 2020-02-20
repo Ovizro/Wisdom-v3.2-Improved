@@ -22,9 +22,7 @@
 // =============================================================================
 
 #version 120
-
 #include "/lib/compat.glsl"
-
 #pragma optimize(on)
 
 #define NORMALS
@@ -37,6 +35,9 @@ uniform mat4 gbufferModelViewInverse;
 uniform float rainStrength;
 uniform float frameTimeCounter;
 uniform int worldTime;
+uniform int heldBlockLightValue;
+uniform int heldBlockLightValue2;
+uniform vec3 upPosition;
 
 //#define WorldTimeAnimation
 
@@ -51,6 +52,8 @@ varying vec4 coords;
 varying vec4 wdata;
 
 varying float dis;
+varying vec3 wpos;
+varying float top;
 
 #define normal wdata.xyz
 #define flag wdata.w
@@ -174,15 +177,22 @@ void main() {
 		flag = max(0.50, waveType.y);
 	} else if (waveType.x == 0.0) flag = max(0.51, waveType.y);
 
+	wpos = position.xyz;
+	top = dot(normalize(upPosition), normal);
+	
 	position = gl_ModelViewMatrix * position;
-	vec3 wpos = position.xyz;
+	vec3 vpos = position.xyz;
 	gl_Position = gl_ProjectionMatrix * position;
 	texcoord = gl_MultiTexCoord0.st;
 	lmcoord = (gl_TextureMatrix[1] *  gl_MultiTexCoord1).xy;
+	
+	dis = length(vpos);
+	lmcoord.x = max((max(float(heldBlockLightValue), float(heldBlockLightValue2)) - dis) / 15, lmcoord.x);
+	lmcoord = log2(lmcoord + 1.0);
 
 	#ifdef ParallaxOcclusion
 	f16mat3 TBN = f16mat3(tangent, binormal, normal);
-	tangentpos = normalize(wpos * TBN);
+	tangentpos = normalize(vpos * TBN);
 	#ifdef PARALLAX_SELF_SHADOW
 	sun = TBN * normalize(shadowLightPosition);
 	#endif
@@ -191,6 +201,4 @@ void main() {
 	#ifndef NORMALS
 	n2 = normalEncode(normal);
 	#endif
-	
-	dis = length(wpos);
 }

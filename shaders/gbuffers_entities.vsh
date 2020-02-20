@@ -26,19 +26,41 @@
 
 uniform mat4 gbufferModelViewInverse;
 
+#define NORMALS
+
+attribute vec4 mc_Entity;
+attribute vec4 mc_midTexCoord;
+attribute vec4 at_tangent;
+
 varying vec4 color;
-varying vec2 normal;
+varying vec3 normal;
 varying vec4 coords;
+
+varying vec2 n2;
 
 #define texcoord coords.rg
 #define lmcoord coords.ba
 
 #include "gbuffers.inc.vsh"
 
+//vec2 normalEncode(vec3 n) {return sqrt(-n.z*0.125+0.125) * normalize(n.xy) + 0.5;}
+
+#ifdef NORMALS
+varying vec3 tangent;
+varying vec3 binormal;
+#endif
+
 VSH {
 	color = gl_Color;
+	
+	#ifdef NORMALS
+	tangent = normalize(gl_NormalMatrix * at_tangent.xyz);
+    binormal = cross(normal, tangent);
+    #endif
+	
 	gl_Position = ftransform();
-	normal = normalEncode(gl_NormalMatrix * gl_Normal);
+	normal = gl_NormalMatrix * gl_Normal;
+	n2 = normalEncode(normal);
 	texcoord = (gl_TextureMatrix[0] * gl_MultiTexCoord0).st;
 	lmcoord = (gl_TextureMatrix[1] * gl_MultiTexCoord1).xy;
 }

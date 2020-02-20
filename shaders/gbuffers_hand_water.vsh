@@ -24,8 +24,11 @@
 #version 120
 #pragma optimize(on)
 
-/* DRAWBUFFERS:02 */
-void main() {
-	gl_FragData[0] = vec4(0.0, 0.0, 0.0, 1.0);//texture2D(texture, texcoord).rrra * 4 * starColor;//
-	gl_FragData[1] = vec4(0.0, 0.0, 0.2, 1.0);
+varying vec2 texcoord;
+
+#include "gbuffers.inc.vsh"
+
+VSH {
+	gl_Position = ftransform();
+	texcoord = (gl_TextureMatrix[0] * gl_MultiTexCoord0).st;
 }

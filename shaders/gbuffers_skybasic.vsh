@@ -22,10 +22,10 @@
 // =============================================================================
 
 #version 120
+#include "/lib/compat.glsl"
 #pragma optimize(on)
 
 #include "gbuffers.inc.vsh"
-
 
 VSH {
 	gl_Position = ftransform();

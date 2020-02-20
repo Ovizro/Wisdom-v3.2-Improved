@@ -24,7 +24,7 @@ uniform ivec2 eyeBrightness;
 
 uniform int isEyeInWater;
 
-#ifndef _VERTEX_SHADER_
+#if !(defined _VERTEX_SHADER_) && !(defined _GBUFFER_SHADER_)
 uniform sampler2D colortex0;
 uniform sampler2D colortex1;
 uniform sampler2D colortex2;
@@ -44,7 +44,9 @@ uniform sampler2D shadowtex1;
 uniform sampler2D noisetex;
 
 uniform mat4 shadowModelView;
+uniform mat4 shadowModelViewInverse;
 uniform mat4 shadowProjection;
+uniform mat4 shadowProjectionInverse;
 
 uniform mat4 gbufferPreviousModelView;
 uniform mat4 gbufferModelView;

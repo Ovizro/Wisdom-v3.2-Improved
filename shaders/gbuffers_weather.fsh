@@ -22,16 +22,16 @@
 // =============================================================================
 
 #version 120
+#include "/lib/compat.glsl"
 #pragma optimize(on)
 
-uniform sampler2D texture;
+uniform sampler2D_color texture;
 
 varying vec4 color;
-varying vec2 normal;
 varying vec2 texcoord;
 
-/* DRAWBUFFERS:0 */
+/* DRAWBUFFERS:71 */
 void main() {
-	vec4 tex = texture2D(texture, texcoord);
-	gl_FragData[0] = tex * color;
+	gl_FragData[0] = texture2D(texture, texcoord) * color;
+	gl_FragData[1] = vec4(0.0, 0.0, 0.99, 1.0);
 }
