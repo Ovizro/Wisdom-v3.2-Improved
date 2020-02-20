@@ -46,6 +46,8 @@ varying vec2 vUVDot;
 
 #define colorTexture_debug 0 //[0 1 2 3 4 5 6 7 8 9 10]
 // 0 close || 1 colortex0/gcolor || 2 colortex1/gdepth || 3 colortex2/gnormal || 4 colortex3/composite || 5 colortex4/gaux1 || 6 colortex5/gaux2 || 7 colortex6/gaux3 || 8 colortex7/gaux4 || 9 depthtex0/depthtex || 10 depthtex1
+
+uniform sampler2D shadowcolor0;
 //#define BLACK_AND_WHITE
 //#define BLOOM_DEBUG
 
@@ -130,7 +132,7 @@ void main() {
 		colortex = pow(texture2D(depthtex0,texcoord), vec4(100.0));
 		break;
 		case 10:
-		colortex = pow(texture2D(depthtex1,texcoord), vec4(100.0));
+		colortex = pow(texture2D(shadowcolor0,texcoord), vec4(1.0));
 		break;
 	}
 	tone.color = colortex.rgb;//colortex.a;

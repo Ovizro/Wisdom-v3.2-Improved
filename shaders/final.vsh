@@ -86,7 +86,7 @@ void main() {
 	vUV.xy += tex;
 	#endif
 	
-	#ifdef ANIMATION
+	#if ANIMATION > 0
 	animationCommons();
 	#endif
 	
