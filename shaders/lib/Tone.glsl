@@ -427,10 +427,8 @@ void Hue_Adjustment(inout Tone t) {
 	t.color = vignette(t.color);
 	#endif
 	
-	// Apply night vision gamma
-	t.color = pow(t.color, vec3(1.0 - nightVision * 0.6));
-	// Apply blindness
-	t.color = pow(t.color, vec3(1.0 + blindness));	
+	// Apply night vision gamma and blindness
+	t.color = pow(t.color, vec3(1.0 - nightVision * 0.6 + blindness));	
 	
 	t.color = mix(color, t.color, t.useAdjustment);
 	//t.color = vignetteColor;

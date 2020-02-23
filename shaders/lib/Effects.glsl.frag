@@ -291,9 +291,6 @@ void dof(inout Tone t, vec2 texcoord, bool is_hand) {
 	naive += pow(dot(texcoord.st - vec2(0.5), texcoord.st - vec2(0.5)),EdgeBlurDecline * 0.5) * EdgeBlurAmount;
 	#endif
 
-	vec2 aspectcorrect = vec2(1.0, aspectRatio) * 1.6;
-	vec3 col = vec3(0.0);
-	col += GetColorTexture(texcoord.st);
 	naive *= (1.0 - float(is_hand) * 0.9);
 
 	#if DOF == 1
@@ -305,6 +302,9 @@ void dof(inout Tone t, vec2 texcoord, bool is_hand) {
 	t.blurIndex = log2(naive * 160.0 + 1.0);
 	//t.color = vec3(naive * 128.0);
 	#else
+	vec2 aspectcorrect = vec2(1.0, aspectRatio) * 1.6;
+	vec3 col = vec3(0.0);
+	col += GetColorTexture(texcoord.st);
 	#if DOF == 4 || DOF == 6
 	const vec2 offsets[60] = vec2[60](vec2(  0.2165,  0.1250 ),
 									vec2(  0.0000,  0.2500 ),

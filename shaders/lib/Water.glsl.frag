@@ -181,7 +181,7 @@ vec3 getWaterFogColor(float light) {
 }
 
 vec3 waterRender(vec3 wcolor, float lat, float ab) {
-	//wcolor *= 1.0 - Time.w * 0.7;
+	wcolor *= 1.0 - Time.w * 0.6;
 	#if WaterColor == 0
 	const vec2 waterA1 = vec2(1.0, 0.0);
 	#elif WaterColor == 1 || WaterColor == 3
