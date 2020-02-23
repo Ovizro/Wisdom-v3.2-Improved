@@ -178,7 +178,7 @@ vec2 ParallaxMapping(in vec2 coord) {
 
 vec2 getWetness(inout vec4 sp, float height) {
 	#ifdef NEW_RAIN_SPLASHES
-	float wet0 = BiomeType.x * min(wetness * 6, 1.0) * 3.8 * smoothstep(0.5, 1.0, BiomeType.y) * RAIN_SPLASH_LEVEL;
+	float wet0 = BiomeType.x * min(wetness * 4, 1.0) * 3.8 * smoothstep(0.5, 1.0, BiomeType.y) * RAIN_SPLASH_LEVEL;
 	float rH = wet0 * plus(sp.r, sp.g) * smoothstep(0.92, 1.0, lmcoord.y) * top;
 	float isWater = step(height, rH * 1.2);
 	wet0 *= smoothstep(0.8, 1.0, lmcoord.y);
@@ -187,7 +187,7 @@ vec2 getWetness(inout vec4 sp, float height) {
 	sp.b = max(sp.b - wet0 * 0.1 - isWater * 0.4, 0.0);
 	return vec2(isWater, (wet0 * 0.5 + isWater) * (1.0- plus(sp.g, sp.r)));
 	#else
-	return vec2(0.0, wetness * smoothstep(0.5, 1.0, BiomeType.y));
+	return vec2(0.0);
 	#endif
 }
 
@@ -211,33 +211,6 @@ float16_t noise(f16vec2 p) {
 		mix(hash(i + f16vec2(0.0f,1.0f)), hash(i + f16vec2(1.0f,1.0f)), u.x),
 	u.y), -1.0f);
 }
-#endif
-
-//const int off = 0, low = 1, medium = 2, high = 3, ultra = 4;
-#define RAIN_SPLASH_GUALITY low //[off low medium high ultra]
-
-float saturate(float x)
-{
-	return clamp(x, 0.0, 1.0);
-}
-
-vec3 saturate(vec3 x)
-{
-	return clamp(x, vec3(0.0), vec3(1.0));
-}
-
-vec2 saturate(vec2 x)
-{
-	return clamp(x, vec2(0.0), vec2(1.0));
-}
-
-#if RAIN_SPLASH_GUALITY == ultra
-#include "/lib/Ripple.glsl"
-#elif RAIN_SPLASH_GUALITY != off
-uniform sampler2D gaux1;
-uniform sampler2D gaux2;
-uniform sampler2D gaux3;
-#include "/lib/Ripple2.glsl"
 #endif
 
 /*vec3 numTest(float x) {
@@ -280,14 +253,8 @@ void main() {
 		f16vec3 normal2 = normal;
 		if (dis < 64.0) {
 			#ifdef RAIN_SPLASH_WAVE
-			N.x += noise(wpos.xz * 5.0 - vec2(frametime * 2.0, 0.0)) * 0.04 * wet.x * (1.0 + rain0);
-			N.y -= noise(wpos.xz * 6.0 - vec2(frametime * 2.0, 0.0)) * 0.04 * wet.x * (1.0 + rain0);
-			#endif
-			//vec3 rainNormal = vec3(0.0);
-			#if RAIN_SPLASH_GUALITY == ultra
-			vec3 rainNormal = GetRipplesNormal(wpos, 3.0);
-			#elif RAIN_SPLASH_GUALITY != off
-			vec3 rainNormal = GetRainNormal(wpos, 3.0);
+			N.x += noise(wpos.xz * (5.0 + rain0 * 5) - vec2(frametime * 2.0, 0.0)) * 0.04 * wet.x * (1.0 + rain0);
+			N.y -= noise(wpos.xz * (5.0 + rain0 * 5) - vec2(frametime * 2.0, 0.0)) * 0.04 * wet.x * (1.0 + rain0);
 			#endif
 			normal2 = norMap.xyz * 2.0 - 1.0;
 			//rainNormal = rainNormal * 2.0 + 1.0;
@@ -297,10 +264,6 @@ void main() {
 			
 			f16mat3 tbnMatrix = mat3(tangent, binormal, normal);
 			normal2 = tbnMatrix * normal2;
-			#if RAIN_SPLASH_GUALITY != off
-			rainNormal = tbnMatrix * rainNormal;
-			N += rainNormal;
-			#endif
 		}
 		N = normalize(N);//  + vec4(rainNormal
 		f16vec2 n2 = normalEncode(N);
